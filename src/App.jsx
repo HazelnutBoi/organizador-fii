@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { loadDocentes, loadPlanEstudios } from './utils/csvParser';
-// CORRECCIÓN AQUÍ: Usamos 'Upload' en lugar de 'CloudUpload' para evitar errores de versión
 import { LayoutGrid, Search, Calendar, Settings, BookOpen, Plus, X, MapPin, User, Trash2, Building2, Briefcase, FileSpreadsheet, FileText, AlertTriangle, Monitor, Upload } from 'lucide-react';
 
 import { usePersistentState } from './hooks/usePersistentState';
@@ -12,6 +11,7 @@ import DocentesManager from './components/DocentesManager';
 import MateriasManager from './components/MateriasManager';
 import TeacherMonitor from './components/TeacherMonitor';
 import { downloadGroupSchedule } from './utils/exporters';
+import { getMateriaColor } from './utils/colors'; // <--- IMPORTAR LOS COLORES
 
 const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const bloquesHorarios = [
@@ -44,10 +44,13 @@ function App() {
   const [newServiceMateria, setNewServiceMateria] = useState({ codigo: '', nombre: '', horasT: 4, horasL: 0 });
   const [activeMateria, setActiveMateria] = useState(null); 
   const [filtroMateria, setFiltroMateria] = useState("");
+  const [isEditingTab, setIsEditingTab] = useState(false);
+
+  // Variable para guardar el item que se está arrastrando (sea del sidebar o de la grilla)
+  const [dragItem, setDragItem] = useState(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
-  // Carga inicial de pestaña
   useEffect(() => {
       if (!loadingTabs && Array.isArray(tabs) && tabs.length > 0 && !activeTabId) {
           setActiveTabId(tabs[0].id);
@@ -126,7 +129,6 @@ function App() {
     return counts;
   }, [activeHorario]);
 
-  // Validación de conflictos segura contra nulos
   const getConflictos = (cellId, asignacion) => {
       if (!asignacion || !asignacion.materia || !activeTabId) return null;
       const errores = {};
@@ -167,6 +169,65 @@ function App() {
     setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, horario: callback(t.horario || {}) } : t));
   };
 
+  // --- NUEVA LÓGICA DE DRAG & DROP ---
+  const handleDragStart = (e) => {
+      const data = e.active.data.current;
+      if (data) {
+          // Guardamos qué estamos arrastrando (puede ser del sidebar o de la grilla)
+          setDragItem(data);
+      }
+  };
+
+  const handleDragEnd = (e) => {
+    const { active, over } = e;
+    setDragItem(null); // Limpiamos estado visual
+
+    if (!over || !active.data.current || !activeTabId) return;
+
+    const sourceData = active.data.current;
+    const targetCellId = over.id;
+
+    // CASO 1: Mover dentro de la Grilla (Grid -> Grid)
+    if (sourceData.origin === 'grid') {
+        const sourceCellId = sourceData.cellId;
+        
+        // Si lo soltamos en el mismo lugar, no hacemos nada
+        if (sourceCellId === targetCellId) return;
+
+        // Si la celda destino ya está ocupada, avisamos (podríamos intercambiar, pero por seguridad avisamos)
+        if (activeHorario[targetCellId]?.materia) {
+            return alert("La celda destino ya está ocupada. Elimínala primero o muévela a otro lado.");
+        }
+
+        updateActiveHorario(prev => {
+            const newHorario = { ...prev };
+            // Copiamos la data a la nueva celda
+            newHorario[targetCellId] = { ...sourceData.asignacion };
+            // Borramos la data de la celda vieja
+            delete newHorario[sourceCellId];
+            return newHorario;
+        });
+    } 
+    // CASO 2: Agregar desde el Sidebar (Sidebar -> Grid)
+    else {
+        const materia = sourceData.materia;
+        
+        // Verificamos si la celda destino está ocupada
+        if (activeHorario[targetCellId]?.materia) {
+             if(!window.confirm("Esta celda ya tiene una materia. ¿Deseas sobrescribirla?")) return;
+        }
+
+        const uso = conteoHorasMateria[materia.codigo] || { T: 0, L: 0 };
+        let tipo = uso.T < materia.horasT ? 'T' : (uso.L < materia.horasL ? 'L' : null);
+        
+        if (tipo) {
+            updateActiveHorario(p => ({ ...p, [targetCellId]: { materia, docente: null, tipo, salon: '' } }));
+        } else {
+            alert(`Límite alcanzado para "${materia.nombre}"`);
+        }
+    }
+  };
+
   const handleTipoChange = (cellId, nuevoTipo) => {
       const asignacion = activeHorario[cellId];
       if (!asignacion) return;
@@ -175,19 +236,6 @@ function App() {
       const limite = nuevoTipo === 'T' ? materia.horasT : materia.horasL;
       if (usoActual[nuevoTipo] >= limite) return alert(`⚠️ Límite de horas alcanzado (${limite} hrs).`);
       updateActiveHorario(p => ({...p, [cellId]: {...p[cellId], tipo: nuevoTipo}}));
-  };
-
-  const handleDragEnd = (e) => {
-    const { active, over } = e;
-    if (over && active.data.current && activeTabId) {
-      const materia = active.data.current.materia;
-      const cellId = over.id;
-      const uso = conteoHorasMateria[materia.codigo] || { T: 0, L: 0 };
-      let tipo = uso.T < materia.horasT ? 'T' : (uso.L < materia.horasL ? 'L' : null);
-      if (tipo) updateActiveHorario(p => ({ ...p, [cellId]: { materia, docente: null, tipo, salon: '' } }));
-      else alert(`Límite alcanzado para "${materia.nombre}"`);
-    }
-    setActiveMateria(null);
   };
 
   const handleUploadInitialData = async () => {
@@ -204,11 +252,9 @@ function App() {
         setTabs([]);
         setDocentes([]);
         setPlanEstudios([]);
-        // Opcional: localStorage.clear();
       }
   };
 
-  // Pantalla de carga mientras llegan datos de Firebase
   if (loadingDocentes || loadingPlan || loadingTabs) {
       return (
         <div className="flex flex-col h-screen items-center justify-center bg-gray-50 gap-4">
@@ -219,13 +265,19 @@ function App() {
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(e) => setActiveMateria(e.active.data.current?.materia)} onDragEnd={handleDragEnd}>
+    <DndContext 
+        sensors={sensors} 
+        collisionDetection={closestCenter} 
+        onDragStart={handleDragStart} // <--- Nuevo Handler
+        onDragEnd={handleDragEnd}
+    >
       
       {isModalOpen && <ConfigPanel opciones={opcionesConfig} seleccion={tempConfig} onChange={(field, val) => setTempConfig(prev => ({ ...prev, [field]: val }))} onConfirm={() => {
           const nombre = tempConfig.nombreGrupo.trim().toUpperCase();
           if (!nombre) return alert("Escribe un nombre");
           const tabData = { nombre, tipo: tempConfig.tipo, config: { ...tempConfig } };
-          if (activeTabId && tabs.find(t => t.id === activeTabId)) {
+          
+          if (isEditingTab && activeTabId) {
               setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, ...tabData } : t));
           } else {
               const newId = Date.now();
@@ -250,7 +302,7 @@ function App() {
                   <h1 className="text-4xl font-bold text-gray-800 mb-3">Organizador FII</h1>
                   <p className="text-gray-500 mb-8">No hay horarios creados. Empieza creando uno nuevo.</p>
                   
-                  <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setModalOpen(true); }} className="w-full bg-[#F2BD1D] hover:bg-yellow-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 shadow-lg transition-colors"><Plus size={24} /> Crear Nuevo Horario</button>
+                  <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setIsEditingTab(false); setModalOpen(true); }} className="w-full bg-[#F2BD1D] hover:bg-yellow-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 shadow-lg transition-colors"><Plus size={24} /> Crear Nuevo Horario</button>
                   
                   {(docentes.length === 0 && planEstudios.length === 0) && (
                       <button onClick={handleUploadInitialData} className="mt-8 flex items-center gap-2 mx-auto text-gray-400 hover:text-[#F2BD1D] text-sm underline">
@@ -274,7 +326,7 @@ function App() {
                 </div>
                 
                 <div className={`${activeTab.tipo === 'service' ? 'bg-purple-50' : 'bg-yellow-50'} p-3 border-b`}>
-                      <div className="bg-white p-3 rounded-lg border shadow-sm cursor-pointer hover:border-yellow-400 transition-all group" onClick={() => { setTempConfig({ ...activeTab.config, nombreGrupo: activeTab.nombre, tipo: activeTab.tipo || 'regular' }); setModalOpen(true); }}>
+                      <div className="bg-white p-3 rounded-lg border shadow-sm cursor-pointer hover:border-yellow-400 transition-all group" onClick={() => { setTempConfig({ ...activeTab.config, nombreGrupo: activeTab.nombre, tipo: activeTab.tipo || 'regular' }); setIsEditingTab(true); setModalOpen(true); }}>
                         <div className="flex justify-between font-bold text-sm mb-1 text-blue-900"><span>{activeTab.nombre}</span><Settings size={14} className="text-gray-300"/></div>
                         <span className={`font-mono text-xs block truncate font-bold ${activeTab.tipo === 'service' ? 'text-purple-600' : 'text-[#F2BD1D]'}`}>{currentConfig.carrera || "MODO SERVICIO"}</span>
                     </div>
@@ -327,7 +379,7 @@ function App() {
                             <button onClick={(e) => { e.stopPropagation(); if(window.confirm("¿Cerrar?")) { const nt = tabs.filter(t=>t.id!==tab.id); setTabs(nt); setActiveTabId(nt[0]?.id || null); } }}><X size={12}/></button>
                         </div>
                     ))}
-                    <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setModalOpen(true); }} className="px-3 py-2 rounded-t-lg bg-gray-300 hover:bg-[#F2BD1D]">+</button>
+                    <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setIsEditingTab(false); setModalOpen(true); }} className="px-3 py-2 rounded-t-lg bg-gray-300 hover:bg-[#F2BD1D]">+</button>
                 </div>
 
                 <div className="bg-white p-4 border-b flex justify-between items-center">
@@ -368,6 +420,15 @@ function App() {
                                         docsFiltrados = [...recomendados, {id:'sep',nombre:'---',disabled:true}, ...otros];
                                     }
 
+                                    let isDocenteOverloaded = false;
+                                    if (asignacion?.docente?.id) {
+                                        const docId = asignacion.docente.id;
+                                        const currentDoc = safeDocentes.find(d => d.id === docId);
+                                        const totalHoras = statsDocentes[docId] || 0;
+                                        const tope = currentDoc?.horasTope || 0;
+                                        if (tope > 0 && totalHoras > tope) isDocenteOverloaded = true;
+                                    }
+
                                     return (
                                     <div key={id} className="border-r border-gray-200 last:border-r-0 p-0.5 bg-white hover:bg-gray-50">
                                             <DroppableCell 
@@ -394,6 +455,7 @@ function App() {
                                                 posiblesDocentes={docsFiltrados}
                                                 statusValidacion={conflictos?.validacion}
                                                 conflictos={conflictos}
+                                                isOverloaded={isDocenteOverloaded}
                                             />
                                     </div>
                                     );
@@ -405,7 +467,25 @@ function App() {
             </div>
         </div>
       )}
-      <DragOverlay>{activeMateria && <div className="bg-blue-600 text-white p-3 rounded-lg w-56 font-bold shadow-2xl border-2 border-white">{activeMateria.nombre}</div>}</DragOverlay>
+      
+      {/* 4. DRAG OVERLAY ACTUALIZADO: Maneja tanto sidebar como grid */}
+      <DragOverlay dropAnimation={null}>
+        {dragItem ? (
+            <div 
+                className="bg-white p-2 rounded shadow-2xl border-2 border-blue-500 w-48 opacity-90 text-xs flex flex-col gap-1"
+                style={{ backgroundColor: dragItem.materia ? getMateriaColor(dragItem.materia.codigo) : 'white' }}
+            >
+                <div className="font-bold text-blue-900 line-clamp-2">{dragItem.materia?.nombre || dragItem.nombre}</div>
+                {dragItem.asignacion && (
+                    <div className="text-[10px] text-gray-600">
+                        {dragItem.asignacion.docente?.nombre && <div>Prof: {dragItem.asignacion.docente.nombre}</div>}
+                        {dragItem.asignacion.salon && <div>Salón: {dragItem.asignacion.salon}</div>}
+                    </div>
+                )}
+            </div>
+        ) : null}
+      </DragOverlay>
+
     </DndContext>
   );
 }
