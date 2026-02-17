@@ -13,53 +13,88 @@ const bloquesHorarios = [
     { id: "13", inicio: "5:00 PM", fin: "5:45 PM" }, { id: "14", inicio: "5:50 PM", fin: "6:35 PM" },
     { id: "15", inicio: "6:40 PM", fin: "7:25 PM" }, { id: "16", inicio: "7:30 PM", fin: "8:15 PM" },
     { id: "17", inicio: "8:20 PM", fin: "9:05 PM" }, { id: "18", inicio: "9:10 PM", fin: "9:55 PM" },
+    { id: "19", inicio: "10:00 PM", fin: "10:45 PM" }, // <--- NUEVO BLOQUE AGREGADO TAMBIÉN AQUÍ
 ];
 
-// --- FUNCIÓN 1: DESCARGAR HORARIO DE GRUPO ---
+// Función auxiliar para asegurar que TODO sea texto y evitar errores de null
+const safeStr = (val) => {
+    if (val === null || val === undefined) return '';
+    return String(val);
+};
+
 export const downloadGroupSchedule = (tab, format = 'pdf') => {
     if (!tab) return;
-    const title = `Horario Grupo ${tab.nombre}`;
+    const nombreGrupo = safeStr(tab.nombre || 'Sin Nombre');
+    const title = `Horario Grupo ${nombreGrupo}`;
     const headers = [['Hora', ...dias]];
     
+    // Preparamos los datos convirtiendo todo a String explícitamente
     const rows = bloquesHorarios.map(b => {
         const row = [`${b.inicio} - ${b.fin}`];
         dias.forEach(d => {
             const cellId = `${d}-${b.id}`;
-            const asignacion = tab.horario?.[cellId];
-            row.push(asignacion ? `${asignacion.materia.nombre}\n(${asignacion.docente?.nombre || 'Sin Docente'})\nSalón: ${asignacion.salon || 'S/A'}` : '');
+            const asignacion = tab.horario ? tab.horario[cellId] : null;
+            
+            if (asignacion && asignacion.materia) {
+                const matNom = safeStr(asignacion.materia.nombre || 'Materia');
+                const docNom = safeStr(asignacion.docente?.nombre || 'S/D');
+                const salon = safeStr(asignacion.salon || 'S/A');
+                row.push(`${matNom}\n(${docNom})\nSalón: ${salon}`);
+            } else {
+                row.push('');
+            }
         });
         return row;
     });
 
     if (format === 'pdf') {
-        const doc = new jsPDF('l', 'mm', 'a4');
-        doc.text(title, 14, 15);
-        doc.autoTable({ head: headers, body: rows, startY: 20, theme: 'grid', styles: { fontSize: 7, cellPadding: 2 } });
-        doc.save(`${title}.pdf`);
+        try {
+            const doc = new jsPDF('l', 'mm', 'a4');
+            doc.setFontSize(16);
+            doc.text(title, 14, 15);
+            
+            doc.autoTable({
+                head: headers,
+                body: rows,
+                startY: 20,
+                theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 1, overflow: 'linebreak' },
+                headStyles: { fillColor: [242, 189, 29], textColor: [255, 255, 255] },
+                columnStyles: { 0: { cellWidth: 22, fontStyle: 'bold' } }
+            });
+            doc.save(`${nombreGrupo.replace(/\s+/g, '_')}.pdf`);
+        } catch (error) {
+            console.error("Error PDF:", error);
+            // Ahora la alerta te dirá QUÉ falló
+            alert(`Error al crear PDF: ${error.message}`);
+        }
     } else {
         const ws = XLSX.utils.aoa_to_sheet([ [title], ...headers, ...rows ]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Horario");
-        XLSX.writeFile(wb, `${title}.xlsx`);
+        XLSX.writeFile(wb, `${nombreGrupo.replace(/\s+/g, '_')}.xlsx`);
     }
 };
 
-// --- FUNCIÓN 2: DESCARGAR HORARIO POR PROFESOR (LA QUE FALTABA) ---
 export const downloadTeacherSchedule = (docente, tabs, format = 'pdf') => {
     if (!docente) return;
-    const title = `Horario Docente: ${docente.nombre}`;
+    const safeTabs = Array.isArray(tabs) ? tabs : [];
+    const nombreDocente = safeStr(docente.nombre || 'Docente');
+    const title = `Horario Docente: ${nombreDocente}`;
     const headers = [['Hora', ...dias]];
 
-    // Extraemos la ocupación del profesor de todos los grupos existentes
     const rows = bloquesHorarios.map(b => {
         const row = [`${b.inicio} - ${b.fin}`];
         dias.forEach(d => {
             const cellId = `${d}-${b.id}`;
             let info = "";
-            tabs.forEach(tab => {
-                const asignacion = tab.horario?.[cellId];
+            safeTabs.forEach(tab => {
+                const asignacion = tab?.horario?.[cellId];
                 if (asignacion?.docente?.id === docente.id) {
-                    info = `${asignacion.materia.nombre}\nGrupo: ${tab.nombre}\nSalón: ${asignacion.salon || 'S/A'}`;
+                    const mat = safeStr(asignacion.materia?.nombre || 'Clase');
+                    const gp = safeStr(tab.nombre);
+                    const sal = safeStr(asignacion.salon || 'S/A');
+                    info = `${mat}\nGrupo: ${gp}\nSalón: ${sal}`;
                 }
             });
             row.push(info);
@@ -68,25 +103,27 @@ export const downloadTeacherSchedule = (docente, tabs, format = 'pdf') => {
     });
 
     if (format === 'pdf') {
-        const doc = new jsPDF('l', 'mm', 'a4');
-        doc.setFontSize(16);
-        doc.text(title, 14, 15);
-        doc.setFontSize(10);
-        doc.text(`Carga Horaria: ${docente.clasificacion || 'N/A'}`, 14, 22);
-        
-        doc.autoTable({ 
-            head: headers, 
-            body: rows, 
-            startY: 28, 
-            theme: 'grid', 
-            styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-            columnStyles: { 0: { cellWidth: 25 } }
-        });
-        doc.save(`Horario_${docente.nombre.replace(/\s+/g, '_')}.pdf`);
+        try {
+            const doc = new jsPDF('l', 'mm', 'a4');
+            doc.setFontSize(16);
+            doc.text(title, 14, 15);
+            doc.autoTable({
+                head: headers,
+                body: rows,
+                startY: 25,
+                theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 1 },
+                headStyles: { fillColor: [44, 62, 80] }
+            });
+            doc.save(`Horario_${nombreDocente.replace(/\s+/g, '_')}.pdf`);
+        } catch (e) {
+            console.error(e);
+            alert(`Error al crear PDF Docente: ${e.message}`);
+        }
     } else {
-        const ws = XLSX.utils.aoa_to_sheet([ [title], [`Carga: ${docente.clasificacion}`], ...headers, ...rows ]);
+        const ws = XLSX.utils.aoa_to_sheet([ [title], ...headers, ...rows ]);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Horario Docente");
-        XLSX.writeFile(wb, `Horario_${docente.nombre.replace(/\s+/g, '_')}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Horario");
+        XLSX.writeFile(wb, `Horario_${nombreDocente.replace(/\s+/g, '_')}.xlsx`);
     }
 };
