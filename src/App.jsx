@@ -24,11 +24,11 @@ const bloquesHorarios = [
     { id: "13", inicio: "5:00 PM", fin: "5:45 PM" }, { id: "14", inicio: "5:50 PM", fin: "6:35 PM" },
     { id: "15", inicio: "6:40 PM", fin: "7:25 PM" }, { id: "16", inicio: "7:30 PM", fin: "8:15 PM" },
     { id: "17", inicio: "8:20 PM", fin: "9:05 PM" }, { id: "18", inicio: "9:10 PM", fin: "9:55 PM" },
-    { id: "19", inicio: "10:00 PM", fin: "10:45 PM" }, // <--- NUEVO BLOQUE AGREGADO
+    { id: "19", inicio: "10:00 PM", fin: "10:45 PM" },
 ];
 
 const cleanText = (txt) => txt ? txt.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
-const cleanCode = (code) => code ? code.toString().trim().toUpperCase() : "";
+const cleanCode = (code) => code ? code.toString().trim().toUpperCase().replace(/\s/g, '') : "";
 
 function App() {
   const [docentes, setDocentes, loadingDocentes] = usePersistentState('fii_docentes', []);
@@ -76,23 +76,44 @@ function App() {
   const materiasDisponibles = useMemo(() => {
     if (!activeTab) return [];
     if (activeTab.tipo === 'service') return activeTab.customMaterias || [];
+    
     const carreraSel = cleanText(currentConfig.carrera);
     const anioSel = cleanText(currentConfig.anio);
     const semSel = cleanText(currentConfig.semestre);
+    const filtroNombre = cleanText(filtroMateria);
+    const filtroCodigo = cleanCode(filtroMateria);
 
     const safePlan = Array.isArray(planEstudios) ? planEstudios : [];
 
-    return safePlan.filter(m => {
+    const filtradasPorConfig = safePlan.filter(m => {
         const mCarrera = cleanText(m.carrera);
         const mAnio = cleanText(m.anio);
         const mSem = cleanText(m.semestre);
-        const filtro = cleanText(filtroMateria);
+        
         const coincideCarrera = mCarrera === carreraSel || mCarrera.includes(carreraSel);
         const coincideAnio = mAnio === anioSel;
         let coincideSem = mSem === '0' ? (semSel === '1' || semSel === '2') : (mSem === semSel);
         if(!mSem) coincideSem = true;
-        return coincideCarrera && coincideAnio && coincideSem && cleanText(m.nombre).includes(filtro);
-    }).slice(0, 50); 
+
+        return coincideCarrera && coincideAnio && coincideSem;
+    });
+
+    // 🟢 LÓGICA DE FILTRADO: Búsqueda por Nombre/Código y Eliminación de Duplicados
+    const unicas = new Map();
+    filtradasPorConfig.forEach(m => {
+        const mNombre = cleanText(m.nombre);
+        const mCodigo = cleanCode(m.codigo);
+        const coincideBusqueda = mNombre.includes(filtroNombre) || mCodigo.includes(filtroCodigo);
+
+        if (coincideBusqueda) {
+            if (!unicas.has(mCodigo)) {
+                unicas.set(mCodigo, m);
+            }
+        }
+    });
+
+    return Array.from(unicas.values()).slice(0, 50);
+
   }, [planEstudios, activeTab, currentConfig, filtroMateria]);
 
   const statsDocentes = useMemo(() => {
@@ -152,9 +173,10 @@ function App() {
 
       if (asignacion.docente?.id) {
           const ocupados = ocupacionGlobal.docentes[cellId] || [];
-          const choque = ocupados.some(e => e.split(':')[1] === asignacion.docente.id && e.split(':')[0]?.toString() !== activeTabId?.toString());
+          // 🟢 CORRECCIÓN: Convertir a String para comparar IDs numéricos (Manuales) con IDs de texto (CSV)
+          const choque = ocupados.some(e => e.split(':')[1] === asignacion.docente.id.toString() && e.split(':')[0]?.toString() !== activeTabId?.toString());
           if (choque) {
-              const culpableId = ocupados.find(e => e.split(':')[1] === asignacion.docente.id).split(':')[0];
+              const culpableId = ocupados.find(e => e.split(':')[1] === asignacion.docente.id.toString()).split(':')[0];
               const culpableTab = (Array.isArray(tabs) ? tabs : []).find(t => t?.id?.toString() === culpableId?.toString());
               errores.docente = true; 
               errores.mensajeDocente = `Clase en: ${culpableTab?.nombre || 'Otro grupo'}`;
@@ -336,7 +358,7 @@ function App() {
                      </div>
                 ) : (
                     <>
-                        <div className="p-2 border-b bg-gray-50 relative"><Search className="absolute left-3 top-2.5 text-gray-400" size={16}/><input type="text" placeholder="Buscar materia..." className="w-full pl-9 py-2 text-sm border rounded focus:ring-1 focus:ring-[#F2BD1D] outline-none" value={filtroMateria} onChange={e=>setFiltroMateria(e.target.value)}/></div>
+                        <div className="p-2 border-b bg-gray-50 relative"><Search className="absolute left-3 top-2.5 text-gray-400" size={16}/><input type="text" placeholder="Buscar materia (Nombre o Código)..." className="w-full pl-9 py-2 text-sm border rounded focus:ring-1 focus:ring-[#F2BD1D] outline-none" value={filtroMateria} onChange={e=>setFiltroMateria(e.target.value)}/></div>
                         <div className="flex-1 overflow-y-auto p-2 bg-gray-50 space-y-2">
                             {materiasDisponibles.map(mat => {
                                 const asignadas = Object.values(activeHorario).filter(h => h?.materia?.codigo === mat.codigo).length;
@@ -399,10 +421,12 @@ function App() {
                                     let isDocenteOverloaded = false;
                                     if (asignacion?.docente?.id) {
                                         const docId = asignacion.docente.id;
-                                        const currentDoc = safeDocentes.find(d => d.id === docId);
-                                        const totalHoras = statsDocentes[docId] || 0;
-                                        const tope = currentDoc?.horasTope || 0;
-                                        if (tope > 0 && totalHoras > tope) isDocenteOverloaded = true;
+                                        const currentDoc = safeDocentes.find(d => d.id.toString() === docId.toString()); // 🟢 Ajuste aquí también
+                                        if (currentDoc) {
+                                            const totalHoras = statsDocentes[docId] || 0;
+                                            const tope = currentDoc.horasTope || 0;
+                                            if (tope > 0 && totalHoras > tope) isDocenteOverloaded = true;
+                                        }
                                     }
 
                                     return (
@@ -411,10 +435,13 @@ function App() {
                                                 id={id} asignacion={asignacion} 
                                                 onRemove={(cid) => updateActiveHorario(p => {const n={...p}; delete n[cid]; return n;})} 
                                                 onDocenteChange={(cid, docId) => { 
-                                                    const doc = safeDocentes.find(d => d.id === docId) || null;
+                                                    // 🟢 CORRECCIÓN PRINCIPAL: Comparación de IDs robusta (String vs Number)
+                                                    const doc = safeDocentes.find(d => d.id.toString() === docId.toString()) || null;
+                                                    
                                                     if (doc) {
                                                         const ocupados = ocupacionGlobal.docentes[cid] || [];
-                                                        if (ocupados.some(e => e.split(':')[1] === doc.id && e.split(':')[0]?.toString() !== activeTabId?.toString())) {
+                                                        // 🟢 También aseguramos la comparación aquí para el conflicto de horario
+                                                        if (ocupados.some(e => e.split(':')[1] === doc.id.toString() && e.split(':')[0]?.toString() !== activeTabId?.toString())) {
                                                             alert(`⛔ CHOQUE: ${doc.nombre} ya tiene clase aquí.`);
                                                             return; 
                                                         }
