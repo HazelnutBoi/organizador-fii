@@ -1,0 +1,221 @@
+No,Carrera,Año,Semestre,Cod. Asig.,Asignatura,Clases,Lab.
+1,Licenciatura en Ingeniería Industrial,1,0,8355,INGLÉS I,3,0
+2,Licenciatura en Ingeniería Industrial,1,0,1403,GEOGRAFÍA DE PANAMÁ,3,0
+3,Licenciatura en Ingeniería Industrial,1,0,7987,CÁLCULO I,5,0
+4,Licenciatura en Ingeniería Industrial,1,0,0741,DESARROLLO LÓGICO Y ALGORÍTMOS,3,2
+5,Licenciatura en Ingeniería Industrial,1,0,1547,QUÍMICA I,3,3
+6,Licenciatura en Ingeniería Industrial,1,0,1548,DIBUJO I,2,4
+7,Licenciatura en Ingeniería Industrial,1,0,7988,CÁLCULO II,5,0
+8,Licenciatura en Ingeniería Industrial,1,0,8322,CÁLCULO III,4,0
+9,Licenciatura en Ingeniería Industrial,1,0,8319,FÍSICA I (MECÁNICA),4,2
+10,Licenciatura en Ingeniería Industrial,1,0,8320,FÍSICA II (ELECTRICIDAD Y MAGNETISMO),4,2
+11,Licenciatura en Ingeniería Industrial,1,0,8360,COMUNICACIÓN ORAL Y ESCRITO,3,0
+12,Licenciatura en Ingeniería Industrial,1,0,8403,INGLÉS II,3,0
+13,Licenciatura en Ingeniería Industrial,2,1,1407,HISTORIA DE PANAMÁ,3,0
+14,Licenciatura en Ingeniería Industrial,2,1,0709,ECUACIONES DIFERENCIALES ORDINARIAS,5,0
+15,Licenciatura en Ingeniería Industrial,2,1,1688,TECNOLOGÍA MECÁNICA,2,3
+16,Licenciatura en Ingeniería Industrial,2,1,0542,MECÁNICA,4,0
+17,Licenciatura en Ingeniería Industrial,2,1,3020,ADMINISTRACIÓN,3,0
+18,Licenciatura en Ingeniería Industrial,2,1,8030,SISTEMAS CONTABLES,3,0
+19,Licenciatura en Ingeniería Industrial,2,2,8321,MATEMÁTICA SUPERIOR PARA ING.,5,0
+20,Licenciatura en Ingeniería Industrial,2,2,8442,MÉTODOS NUMÉRICOS,3,2
+21,Licenciatura en Ingeniería Industrial,2,2,2681,RESISTENCIA DE MATERIALES I,4,0
+22,Licenciatura en Ingeniería Industrial,2,2,3024,SISTEMAS ELÉCTRICOS,3,2
+23,Licenciatura en Ingeniería Industrial,2,2,3023,MICROECONOMÍA,3,0
+24,Licenciatura en Ingeniería Industrial,2,2,3957,CONTABILIDAD DE COSTOS,3,0
+25,Licenciatura en Ingeniería Industrial,3,1,8443,ESTADÍSTICA I,4,0
+26,Licenciatura en Ingeniería Industrial,3,1,3055,FORMACIÓN DE EMPRENDEDORES,3,0
+27,Licenciatura en Ingeniería Industrial,3,1,3050,TERMODINÁMICA I,3,2
+28,Licenciatura en Ingeniería Industrial,3,1,3026,MACROECONOMÍA,3,0
+29,Licenciatura en Ingeniería Industrial,3,1,8530,CIENCIA DE LOS MATERIALES I,2,3
+30,Licenciatura en Ingeniería Industrial,3,1,3053,COMPORTAMIENTO ORGANIZACIONAL,3,0
+31,Licenciatura en Ingeniería Industrial,3,2,7215,DINÁMICA APLICADA Y TEORÍA DE CONTROL,3,2
+32,Licenciatura en Ingeniería Industrial,3,2,8444,ESTADÍSTICA II,4,0
+33,Licenciatura en Ingeniería Industrial,3,2,3051,DISEÑO MECÁNICO,3,0
+34,Licenciatura en Ingeniería Industrial,3,2,8543,INGENIERÍA ECONÓMICA,4,0
+35,Licenciatura en Ingeniería Industrial,3,2,3060,SEGURIDAD E HIGIENE OCUPACIONAL,3,0
+36,Licenciatura en Ingeniería Industrial,3,2,3025,PROCESOS DE FLUJO,3,2
+37,Licenciatura en Ingeniería Industrial,4,1,3056,GESTIÓN DE CALIDAD I,3,0
+38,Licenciatura en Ingeniería Industrial,4,1,3057,ESTUDIO DE TRABAJO,4,2
+39,Licenciatura en Ingeniería Industrial,4,1,7223,INVESTIGACIÓN DE OPERACIONES I,4,0
+40,Licenciatura en Ingeniería Industrial,4,1,0241,METODOLOGÍA DE LA INVESTIGACIÓN,4,0
+41,Licenciatura en Ingeniería Industrial,4,1,8542,ADMINISTRACIÓN DE RECURSOS HUMANOS,4,0
+42,Licenciatura en Ingeniería Industrial,4,1,0591,DISEÑO DE EXPERIMENTOS,3,1
+43,Licenciatura en Ingeniería Industrial,4,2,1551,MERCADEO,2,2
+44,Licenciatura en Ingeniería Industrial,4,2,7230,INVESTIGACIÓN DE OPERACIONES II,4,0
+45,Licenciatura en Ingeniería Industrial,4,2,3061,GESTIÓN DE CALIDAD II,3,2
+46,Licenciatura en Ingeniería Industrial,4,2,7235,PROCESO DE FABRICACIÓN,3,2
+47,Licenciatura en Ingeniería Industrial,4,2,8536,ADMINISTRACIÓN FINANCIERA,4,0
+48,Licenciatura en Ingeniería Industrial,4,2,0676,MATERIA ELECTIVA,3,0
+49,Licenciatura en Ingeniería Industrial,4,VERANO,1180,INTRODUCCION A LA VIDA LABORAL,1,0
+50,Licenciatura en Ingeniería Industrial,5,1,3063,LEGISLACIÓN LABORAL Y COMERCIAL,3,0
+51,Licenciatura en Ingeniería Industrial,5,1,1549,AMBIENTE Y SISTENIBILIDAD,3,0
+52,Licenciatura en Ingeniería Industrial,5,1,0548,FORMULACIÓN Y EVALUACIÓN DE PROYECTOS,4,0
+53,Licenciatura en Ingeniería Industrial,5,1,0549,PLANIFICACIÓN I,4,0
+54,Licenciatura en Ingeniería Industrial,5,1,0676,MATERIA ELECTIVA,3,0
+55,Licenciatura en Ingeniería Industrial,5,1,3067,ÉTICA PROFESIONAL,2,0
+56,Licenciatura en Ingeniería Industrial,5,1,7651,TRABAJO DE GRADUACIÓN I,3,0
+57,Licenciatura en Ingeniería Industrial,5,2,1552,SIMULACIÓN DE EVENTOS DISCRETOS,2,2
+58,Licenciatura en Ingeniería Industrial,5,2,3070,GERENCIA DE PROYECTOS,4,0
+59,Licenciatura en Ingeniería Industrial,5,2,7234,DISEÑOS DE SIST. DE INFORMACIÓN,3,0
+60,Licenciatura en Ingeniería Industrial,5,2,0551,PLANIFICACIÓN II,4,0
+61,Licenciatura en Ingeniería Industrial,5,2,0676,MATERIA ELECTIVA,3,0
+62,Licenciatura en Ingeniería Industrial,5,2,7652,TRABAJO DE GRADUACIÓN II,1,4
+EE01,Licenciatura en Ingeniería Industrial,5,,0552,INVESTIGACIÓN DE MERCADO,3,0
+EE02,Licenciatura en Ingeniería Industrial,5,,1689,AGROINDUSTRIAS SOSTENIBLES,3,0
+EE03,Licenciatura en Ingeniería Industrial,5,,1690,SISTEMA DE FABRICACIÓN Y ROBÓTICA,3,0
+EE04,Licenciatura en Ingeniería Industrial,5,,1100,LEAN SUPPLY CHAIN MANAGEMENT,3,0
+EE05,Licenciatura en Ingeniería Industrial,5,,0554,ADMINISTRACIÓN FINANCIERA AVANZADA,3,0
+EE06,Licenciatura en Ingeniería Industrial,5,,1691,DISEÑO INDUSTRIAL DE PRODUCTOS,3,0
+EE07,Licenciatura en Ingeniería Industrial,5,,0780,ALMACENES Y CENTROS DE DISTRIBUCIÓN,3,0
+EE08,Licenciatura en Ingeniería Industrial,5,,1692,INTELIG. DE NEGOCIOS Y ANÁLISIS DE DATOS,3,0
+EE09,Licenciatura en Ingeniería Industrial,5,,0080,INNOVACIÓN TECNOLÓGICA PATENTABLE I,3,0
+EE10,Licenciatura en Ingeniería Industrial,5,,0991,ESTRATEGIA DE PUBL. Y PROMOCIÓN,3,0
+EE11,Licenciatura en Ingeniería Industrial,5,,1693,SISTEMAS DE INFORMACIÓN GEOGRÁFICA,3,0
+1,Licenciatura en Gestión Administrativa,1,1,2122,MATEMÁTICAS PARA LA ADMINISTRACIÓN I,4,0
+2,Licenciatura en Gestión Administrativa,1,1,3016,IDIOMA I (ESPAÑOL),3,0
+3,Licenciatura en Gestión Administrativa,1,1,8718,TÓPICOS DE GEOGRAFÍA E HIST. DE PANAMÁ,2,0
+4,Licenciatura en Gestión Administrativa,1,1,8635,CONTABILIDAD GENERAL,4,0
+5,Licenciatura en Gestión Administrativa,1,1,8636,INFORMÁTICA,3,2
+6,Licenciatura en Gestión Administrativa,1,2,8637,ADMINISTRACIÓN,4,0
+7,Licenciatura en Gestión Administrativa,1,2,3018,IDIOMA II (INGLÉS),3,0
+8,Licenciatura en Gestión Administrativa,1,2,5068,ESTADÍSTICA I,3,2
+9,Licenciatura en Gestión Administrativa,1,2,8011,ECOLOGÍA GENERAL,3,0
+10,Licenciatura en Gestión Administrativa,1,2,7195,ELEMENTOS DE INGENIERÍA ECONÓMICA,4,0
+11,Licenciatura en Gestión Administrativa,2,1,8678,GESTIÓN DE MERCADO,4,0
+12,Licenciatura en Gestión Administrativa,2,1,1962,ESTADÍSTICA II,3,2
+13,Licenciatura en Gestión Administrativa,2,1,3053,COMPORTAMIENTO ORGANIZACIONAL,3,0
+14,Licenciatura en Gestión Administrativa,2,1,4864,CONTROL DE COSTOS,3,1
+15,Licenciatura en Gestión Administrativa,2,1,3055,FORMACIÓN DE EMPRENDEDORES,3,0
+16,Licenciatura en Gestión Administrativa,2,2,0241,METODOLOGÍA DE LA INVESTIGACIÓN,4,0
+17,Licenciatura en Gestión Administrativa,2,2,7677,ADMINISTRACIÓN DE SERVICIOS,4,0
+18,Licenciatura en Gestión Administrativa,2,2,0710,SUPERVISIÓN Y LIDERAZGO EMPRESARIAL,3,0
+19,Licenciatura en Gestión Administrativa,2,2,0711,INTRODUCCIÓN A LA ADMON. DE OPERACIONES,4,0
+20,Licenciatura en Gestión Administrativa,2,2,7685,PRESUPUESTO,3,0
+21,Licenciatura en Gestión Administrativa,3,1,7690,POLÍTICA GUB. Y ADMON. PÚBLICA,3,0
+22,Licenciatura en Gestión Administrativa,3,1,7698,LEG. MERC. Y FISCAL,3,0
+23,Licenciatura en Gestión Administrativa,3,1,7341,SISTEMAS DE INFORMACIÓN,3,0
+24,Licenciatura en Gestión Administrativa,3,1,7689,PLANIFICACIÓN Y ORGANIZAC. DEL TRABAJO,3,2
+25,Licenciatura en Gestión Administrativa,3,1,7684,INTRODUCCIÓN A LA MICROECONOMIA,3,0
+26,Licenciatura en Gestión Administrativa,3,1,7688,ADMINISTRACIÓN DE CRÉDITOS Y COBROS,3,0
+27,Licenciatura en Gestión Administrativa,3,2,7686,SEGURIDAD E HIGIENE OCUPACIONAL,3,0
+28,Licenciatura en Gestión Administrativa,3,2,0712,ADMINISTRACIÓN FINANCIERA I,4,0
+29,Licenciatura en Gestión Administrativa,3,2,7695,AUDITORÍA ADMINISTRATIVA,5,0
+30,Licenciatura en Gestión Administrativa,3,2,8639,TEORÍA DE RECURSOS HUMANOS,4,0
+31,Licenciatura en Gestión Administrativa,3,2,0713,ELEMENTOS DE MACROECONOMÍA,4,0
+32,Licenciatura en Gestión Administrativa,4,1,7694,ADMINISTRACIÓN FINANCIERA II,4,0
+33,Licenciatura en Gestión Administrativa,4,1,7699,ADMÓN Y EVAL. DE PROY.,3,0
+34,Licenciatura en Gestión Administrativa,4,1,7703,MERCADEO AVANZADO,4,0
+35,Licenciatura en Gestión Administrativa,4,1,7687,COMERCIO INTERNACIONAL I,4,0
+36,Licenciatura en Gestión Administrativa,4,1,0714,ADMINISTRACIÓN DEL DESEMPEÑO,4,0
+37,Licenciatura en Gestión Administrativa,4,1,0715,TRABAJO DE GRADUACIÓN I,1,4
+38,Licenciatura en Gestión Administrativa,4,2,7702,MET. CUANTI. APLIC. A LA ADMON.,4,0
+39,Licenciatura en Gestión Administrativa,4,2,0717,DESARROLLO DEL TALENTO HUMANO,4,0
+40,Licenciatura en Gestión Administrativa,4,2,7701,COMERCIO INTERNACIONAL II,4,0
+41,Licenciatura en Gestión Administrativa,4,2,0718,LOGÍSTICA EMPRESARIAL,3,0
+42,Licenciatura en Gestión Administrativa,4,2,0719,GESTIÓN DE LA PRODUCCIÓN MÁS LIMPIA,3,0
+43,Licenciatura en Gestión Administrativa,4,2,0716,TRABAJO DE GRADUACIÓN II,1,4
+1,Licenciatura en Logística y TM,1,1,8054,MATEMÁTICA I,5,0
+2,Licenciatura en Logística y TM,1,1,1407,HISTORIA DE PANAMÁ,3,0
+3,Licenciatura en Logística y TM,1,1,8011,ECOLOGÍA GENERAL,3,0
+4,Licenciatura en Logística y TM,1,1,8634,INGLÉS I,4,0
+5,Licenciatura en Logística y TM,1,1,0742,REDACCIÓN DE INFORMES Y EXPRESIÓN ORAL,3,0
+6,Licenciatura en Logística y TM,1,1,0767,INTRODUCCIÓN A LA LOGÍSTICA,3,0
+7,Licenciatura en Logística y TM,1,2,8059,MATEMÁTICA II,5,0
+8,Licenciatura en Logística y TM,1,2,8635,CONTABILIDAD GENERAL,4,0
+9,Licenciatura en Logística y TM,1,2,8638,INGLÉS II,4,0
+10,Licenciatura en Logística y TM,1,2,1403,GEOGRAFÍA DE PANAMÁ,3,0
+11,Licenciatura en Logística y TM,1,2,3067,ÉTICA PROFESIONAL,2,0
+12,Licenciatura en Logística y TM,1,2,8637,ADMINISTRACIÓN,4,0
+13,Licenciatura en Logística y TM,2,1,7242,ECONOMÍA,4,0
+14,Licenciatura en Logística y TM,2,1,2540,ÁLGEBRA DE VECTORES Y MATRICES,3,0
+15,Licenciatura en Logística y TM,2,1,5068,ESTADÍSTICA I,3,2
+16,Licenciatura en Logística y TM,2,1,3053,COMPORTAMIENTO ORGANIZACIONAL,3,0
+17,Licenciatura en Logística y TM,2,1,4864,CONTROL DE COSTOS,3,1
+18,Licenciatura en Logística y TM,2,2,3060,SEGURIDAD E HIGIENE OCUPACIONAL,3,0
+19,Licenciatura en Logística y TM,2,2,3063,LEGISLACION LABORAL Y COMERCIAL,3,0
+20,Licenciatura en Logística y TM,2,2,1962,ESTADÍSTICA II,3,2
+21,Licenciatura en Logística y TM,2,2,0770,"ENVASE, EMBALAJE Y MANEJO DE MATERIALES",3,0
+22,Licenciatura en Logística y TM,2,2,8542,ADMINISTRACIÓN DE RECURSOS HUMANOS,4,0
+23,Licenciatura en Logística y TM,2,2,0769,GESTIÓN DE LA CALIDAD Y SERVICIO AL CLIENTE,4,0
+24,Licenciatura en Logística y TM,3,1,1465,MÉTODOS CUANTIT. APLICADOS A LA LOGÍST.,4,0
+25,Licenciatura en Logística y TM,3,1,3057,ESTUDIO DE TRABAJO,4,2
+26,Licenciatura en Logística y TM,3,1,0773,ADMON. DE COMPRAS Y ABASTECIMIENTOS I,3,0
+27,Licenciatura en Logística y TM,3,1,0768,TRANSPORTE MULTIMODAL DE CARGA I,4,0
+28,Licenciatura en Logística y TM,3,1,8656,ADMINISTRACIÓN FINANCIERA,4,0
+29,Licenciatura en Logística y TM,3,1,3055,FORMACIÓN DE EMPRENDEDORES,3,0
+30,Licenciatura en Logística y TM,3,2,0775,ADMON. DE COMPRAS Y ABASTECIMIENTOS II,3,0
+31,Licenciatura en Logística y TM,3,2,0771,TRANSPORTE MULTIMODAL DE CARGA II,4,0
+32,Licenciatura en Logística y TM,3,2,1466,ADMINISTRACIÓN Y CONTROL DE INVENTARIOS,4,0
+33,Licenciatura en Logística y TM,3,2,0774,PAQ. COMP. APLIC. A LA LOG. Y TRANSP. M.,3,2
+34,Licenciatura en Logística y TM,3,2,0780,ALMACENES Y CENTROS DE DISTRICUCIÓN,3,0
+35,Licenciatura en Logística y TM,3,2,0241,METODOLOGÍA DE LA INVESTIGACIÓN,4,0
+36,Licenciatura en Logística y TM,4,VERANO,1180,INTRODUCCION A LA VIDA LABORAL,1,0
+37,Licenciatura en Logística y TM,4,1,7234,DISEÑOS DE SIST. DE INFORMACIÓN,3,0
+38,Licenciatura en Logística y TM,4,1,1467,ELECTIVA,3,0
+39,Licenciatura en Logística y TM,4,1,0776,MANEJO Y SEGURIDAD DE CARGA,3,0
+40,Licenciatura en Logística y TM,4,1,1468,ADM. DE LA CADENA DE SUMINISTROS Y LOG. I,3,0
+41,Licenciatura en Logística y TM,4,1,0778,SIMULACIÓN APLICADA A LA LOGÍSTICA,2,2
+42,Licenciatura en Logística y TM,4,1,0779,TRABAJO DE GRADUACIÓN I,1,4
+43,Licenciatura en Logística y TM,4,2,8678,GESTIÓN DE MERCADO,4,0
+44,Licenciatura en Logística y TM,4,2,3070,GERENCIA DE PROYECTOS,4,0
+45,Licenciatura en Logística y TM,4,2,0781,NORMATIVA ADUANERA Y COMERCIO EXTERIOR,4,0
+46,Licenciatura en Logística y TM,4,2,3071,COMERCIO INTERNACIONAL,3,0
+47,Licenciatura en Logística y TM,4,2,0772,ADMINISTRACIÓN DE LA PRODUCCIÓN,4,0
+48,Licenciatura en Logística y TM,4,2,0783,TRABAJO DE GRADUACIÓN II,1,4
+EE01,Licenciatura en Logística y TM,4,1,0719,GESTIÓN DE LA PRODUCCIÓN MÁS LIMPIA,3,0
+EE02,Licenciatura en Logística y TM,4,1,1102,GESTIÓN DEL RIESGO DE LA CADENA DE SUM.,3,0
+1,Licenciatura en Mercadeo y Negocios Internacionales,1,1,2122,MATEMÁTICAS PARA LA ADMINISTRACIÓN I,4,0
+2,Licenciatura en Mercadeo y Negocios Internacionales,1,1,8355,INGLÉS I,3,0
+3,Licenciatura en Mercadeo y Negocios Internacionales,1,1,8030,SISTEMAS CONTABLES,3,0
+4,Licenciatura en Mercadeo y Negocios Internacionales,1,1,1549,AMBIENTE Y SOSTENIBILIDAD,3,0
+5,Licenciatura en Mercadeo y Negocios Internacionales,1,1,8360,COMUNICACIÓN ORAL Y ESCRITA,3,0
+6,Licenciatura en Mercadeo y Negocios Internacionales,1,1,1403,GEOGRAFÍA DE PANAMÁ,3,0
+7,Licenciatura en Mercadeo y Negocios Internacionales,1,2,2123,MATEMÁTICAS PARA LA ADMINISTRACIÓN II,4,0
+8,Licenciatura en Mercadeo y Negocios Internacionales,1,2,8403,INGLÉS II,3,0
+9,Licenciatura en Mercadeo y Negocios Internacionales,1,2,8637,ADMINISTRACIÓN,4,0
+10,Licenciatura en Mercadeo y Negocios Internacionales,1,2,4864,CONTROL DE COSTOS,3,1
+11,Licenciatura en Mercadeo y Negocios Internacionales,1,2,1407,HISTORIA DE PANAMÁ,3,0
+12,Licenciatura en Mercadeo y Negocios Internacionales,2,1,8639,TEORÍA DE RECURSOS HUMANOS,4,0
+13,Licenciatura en Mercadeo y Negocios Internacionales,2,1,5068,ESTADÍSTICA I,3,2
+14,Licenciatura en Mercadeo y Negocios Internacionales,2,1,0983,FUNDAMENTOS DE MERCADOTECNIA,4,0
+15,Licenciatura en Mercadeo y Negocios Internacionales,2,1,7685,PRESUPUESTO,3,0
+16,Licenciatura en Mercadeo y Negocios Internacionales,2,1,3067,ÉTICA PROFESIONAL,2,0
+17,Licenciatura en Mercadeo y Negocios Internacionales,2,2,8646,GESTIÓN DE CRED. Y COBROS,3,0
+18,Licenciatura en Mercadeo y Negocios Internacionales,2,2,1962,ESTADÍSTICA II,3,2
+19,Licenciatura en Mercadeo y Negocios Internacionales,2,2,0984,DERECHO LABORAL Y COMERCIAL,4,0
+20,Licenciatura en Mercadeo y Negocios Internacionales,2,2,0241,METODOLOGÍA DE LA INVESTIGACIÓN,4,0
+21,Licenciatura en Mercadeo y Negocios Internacionales,2,2,3055,FORMACIÓN DE EMPRENDEDORES,3,0
+22,Licenciatura en Mercadeo y Negocios Internacionales,3,1,7195,ELEMENTOS DE INGENIERÍA ECONÓMICA,4,0
+23,Licenciatura en Mercadeo y Negocios Internacionales,3,1,8647,GESTIÓN DE CALIDAD,4,0
+24,Licenciatura en Mercadeo y Negocios Internacionales,3,1,8659,MET. CUANT. APLIC. AL MERCADEO,4,0
+25,Licenciatura en Mercadeo y Negocios Internacionales,3,1,3023,MICROECONOMÍA,3,0
+26,Licenciatura en Mercadeo y Negocios Internacionales,3,1,0986,INVESTIGACIÓN DE MERCADOS I,3,0
+27,Licenciatura en Mercadeo y Negocios Internacionales,3,1,0988,LOGÍSTICA Y CADENA DE SUMINISTROS,4,0
+28,Licenciatura en Mercadeo y Negocios Internacionales,3,2,8654,ADMINISTRACIÓN DE COMPRA Y ABASTECIM.,3,0
+29,Licenciatura en Mercadeo y Negocios Internacionales,3,2,0987,ADMINISTRACIÓN DE VENTAS,4,0
+30,Licenciatura en Mercadeo y Negocios Internacionales,3,2,8663,COMPORTAMIENTO DEL CONSUMIDOR,3,0
+31,Licenciatura en Mercadeo y Negocios Internacionales,3,2,0989,INVESTIGACIÓN DE MERCADOS II,3,0
+32,Licenciatura en Mercadeo y Negocios Internacionales,3,2,8661,MERCADEO ELECTRÓNICO,4,0
+33,Licenciatura en Mercadeo y Negocios Internacionales,3,VERANO,1180,INTRODUCCIÓN A LA VIDA LABORAL,1,0
+34,Licenciatura en Mercadeo y Negocios Internacionales,4,1,0990,ESTRATEGIA DE PROD. Y PRECIO,3,0
+35,Licenciatura en Mercadeo y Negocios Internacionales,4,1,0991,ESTRATEGIA DE PUBL. Y PROMOCIÓN,3,0
+36,Licenciatura en Mercadeo y Negocios Internacionales,4,1,0992,ESTRATEGIA DE DISTRIBUCIÓN,3,0
+37,Licenciatura en Mercadeo y Negocios Internacionales,4,1,8656,ADMINISTRACIÓN FINANCIERA,4,0
+38,Licenciatura en Mercadeo y Negocios Internacionales,4,1,3026,MACREOECONOMÍA,3,0
+39,Licenciatura en Mercadeo y Negocios Internacionales,4,1,0676,MATERIA ELECTIVA,3,0
+40,Licenciatura en Mercadeo y Negocios Internacionales,4,1,8665,TRABAJO DE GRADUACIÓN I,1,4
+41,Licenciatura en Mercadeo y Negocios Internacionales,4,2,8666,ADMON. Y EVAL. DE PROY. DE INV.,4,0
+42,Licenciatura en Mercadeo y Negocios Internacionales,4,2,0993,COMERCIO INTERNACIONAL,4,0
+43,Licenciatura en Mercadeo y Negocios Internacionales,4,2,0995,ADMINISTRACIÓN DE MARCA,3,0
+44,Licenciatura en Mercadeo y Negocios Internacionales,4,2,8670,SISTEMA DE INF. EN MERCADEO,4,0
+45,Licenciatura en Mercadeo y Negocios Internacionales,4,2,0676,MATERIA ELECTIVA,3,0
+46,Licenciatura en Mercadeo y Negocios Internacionales,4,2,8671,TRABAJO DE GRADUACIÓN II,1,4
+EE01,Licenciatura en Mercadeo y Negocios Internacionales,4,,1110,MARKETING DE SERVICIOS,3,0
+EE02,Licenciatura en Mercadeo y Negocios Internacionales,4,,1112,MARKETING TURÍSTICO,3,0
+EE03,Licenciatura en Mercadeo y Negocios Internacionales,4,,1116,MARKETING ESTRATÉGICO,3,0
+EE04,Licenciatura en Mercadeo y Negocios Internacionales,4,,1117,MARKETING AGROINDUSTRIAL,3,0
+EE05,Licenciatura en Mercadeo y Negocios Internacionales,4,,1118,ACUERDOS COMERC. INTER. Y OPORT. DE NEG.,3,0
+EE06,Licenciatura en Mercadeo y Negocios Internacionales,4,,1119,GESTIÓN Y PRÁCTICA ADUANERA,3,0
+EE07,Licenciatura en Mercadeo y Negocios Internacionales,4,,0996,NEG. EMPRESARIALES Y COMERC. INT.,3,0
+EE08,Licenciatura en Mercadeo y Negocios Internacionales,4,,1694,NUEVAS TENDENCIAS DEL MARKETING DIGITAL,3,0
