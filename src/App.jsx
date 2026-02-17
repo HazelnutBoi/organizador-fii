@@ -11,7 +11,7 @@ import DocentesManager from './components/DocentesManager';
 import MateriasManager from './components/MateriasManager';
 import TeacherMonitor from './components/TeacherMonitor';
 import { downloadGroupSchedule } from './utils/exporters';
-import { getMateriaColor } from './utils/colors'; // <--- IMPORTAR LOS COLORES
+import { getMateriaColor } from './utils/colors';
 
 const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const bloquesHorarios = [
@@ -24,6 +24,7 @@ const bloquesHorarios = [
     { id: "13", inicio: "5:00 PM", fin: "5:45 PM" }, { id: "14", inicio: "5:50 PM", fin: "6:35 PM" },
     { id: "15", inicio: "6:40 PM", fin: "7:25 PM" }, { id: "16", inicio: "7:30 PM", fin: "8:15 PM" },
     { id: "17", inicio: "8:20 PM", fin: "9:05 PM" }, { id: "18", inicio: "9:10 PM", fin: "9:55 PM" },
+    { id: "19", inicio: "10:00 PM", fin: "10:45 PM" }, // <--- NUEVO BLOQUE AGREGADO
 ];
 
 const cleanText = (txt) => txt ? txt.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
@@ -45,8 +46,6 @@ function App() {
   const [activeMateria, setActiveMateria] = useState(null); 
   const [filtroMateria, setFiltroMateria] = useState("");
   const [isEditingTab, setIsEditingTab] = useState(false);
-
-  // Variable para guardar el item que se está arrastrando (sea del sidebar o de la grilla)
   const [dragItem, setDragItem] = useState(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -169,54 +168,36 @@ function App() {
     setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, horario: callback(t.horario || {}) } : t));
   };
 
-  // --- NUEVA LÓGICA DE DRAG & DROP ---
   const handleDragStart = (e) => {
       const data = e.active.data.current;
-      if (data) {
-          // Guardamos qué estamos arrastrando (puede ser del sidebar o de la grilla)
-          setDragItem(data);
-      }
+      if (data) setDragItem(data);
   };
 
   const handleDragEnd = (e) => {
     const { active, over } = e;
-    setDragItem(null); // Limpiamos estado visual
+    setDragItem(null); 
 
     if (!over || !active.data.current || !activeTabId) return;
 
     const sourceData = active.data.current;
     const targetCellId = over.id;
 
-    // CASO 1: Mover dentro de la Grilla (Grid -> Grid)
     if (sourceData.origin === 'grid') {
         const sourceCellId = sourceData.cellId;
-        
-        // Si lo soltamos en el mismo lugar, no hacemos nada
         if (sourceCellId === targetCellId) return;
-
-        // Si la celda destino ya está ocupada, avisamos (podríamos intercambiar, pero por seguridad avisamos)
-        if (activeHorario[targetCellId]?.materia) {
-            return alert("La celda destino ya está ocupada. Elimínala primero o muévela a otro lado.");
-        }
+        if (activeHorario[targetCellId]?.materia) return alert("La celda destino ya está ocupada.");
 
         updateActiveHorario(prev => {
             const newHorario = { ...prev };
-            // Copiamos la data a la nueva celda
             newHorario[targetCellId] = { ...sourceData.asignacion };
-            // Borramos la data de la celda vieja
             delete newHorario[sourceCellId];
             return newHorario;
         });
-    } 
-    // CASO 2: Agregar desde el Sidebar (Sidebar -> Grid)
-    else {
+    } else {
         const materia = sourceData.materia;
-        
-        // Verificamos si la celda destino está ocupada
         if (activeHorario[targetCellId]?.materia) {
-             if(!window.confirm("Esta celda ya tiene una materia. ¿Deseas sobrescribirla?")) return;
+             if(!window.confirm("Esta celda ya tiene una materia. ¿Sobrescribir?")) return;
         }
-
         const uso = conteoHorasMateria[materia.codigo] || { T: 0, L: 0 };
         let tipo = uso.T < materia.horasT ? 'T' : (uso.L < materia.horasL ? 'L' : null);
         
@@ -265,12 +246,7 @@ function App() {
   }
 
   return (
-    <DndContext 
-        sensors={sensors} 
-        collisionDetection={closestCenter} 
-        onDragStart={handleDragStart} // <--- Nuevo Handler
-        onDragEnd={handleDragEnd}
-    >
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       
       {isModalOpen && <ConfigPanel opciones={opcionesConfig} seleccion={tempConfig} onChange={(field, val) => setTempConfig(prev => ({ ...prev, [field]: val }))} onConfirm={() => {
           const nombre = tempConfig.nombreGrupo.trim().toUpperCase();
@@ -468,7 +444,6 @@ function App() {
         </div>
       )}
       
-      {/* 4. DRAG OVERLAY ACTUALIZADO: Maneja tanto sidebar como grid */}
       <DragOverlay dropAnimation={null}>
         {dragItem ? (
             <div 
