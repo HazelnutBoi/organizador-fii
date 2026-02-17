@@ -33,7 +33,6 @@ export function DroppableCell({
         disabled: !asignacion?.materia // Solo se arrastra si hay materia
     });
 
-    // Estilo dinámico para el movimiento y el color de fondo
     const style = {
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.3 : 1,
@@ -41,7 +40,7 @@ export function DroppableCell({
         backgroundColor: isOver ? '#f0fdf4' : (asignacion?.materia ? getMateriaColor(asignacion.materia.codigo) : 'white'),
     };
 
-    // Lógica de bordes para conflictos
+    // Bordes de alerta
     let borderClass = "border-transparent";
     if (conflictos?.salon || conflictos?.docente) borderClass = "border-red-500 border-2 shadow-red-200 shadow-md";
     else if (isOverloaded) borderClass = "border-orange-400 border-2";
@@ -86,7 +85,7 @@ export function DroppableCell({
                     <div className="flex items-center gap-1 mt-auto">
                         <User size={10} className={conflictos?.docente ? "text-red-600" : "text-gray-500"}/>
                         <select 
-                            onPointerDown={(e) => e.stopPropagation()} // Permite clicar sin arrastrar
+                            onPointerDown={(e) => e.stopPropagation()}
                             className={`w-full bg-transparent border-b border-black/10 focus:border-blue-500 outline-none text-[9px] truncate cursor-pointer py-0.5 ${conflictos?.docente ? 'text-red-700 font-bold' : 'text-gray-800'}`}
                             value={asignacion.docente?.id || ""}
                             onChange={(e) => onDocenteChange(id, e.target.value)}
@@ -112,19 +111,19 @@ export function DroppableCell({
                         />
                     </div>
 
-                    {/* MENSAJES DE ERROR FLOTANTES */}
+                    {/* Mensajes de Error Flotantes */}
                     {(conflictos?.mensajeDocente || conflictos?.grupoConflictivo) && (
                         <div className="text-[8px] bg-red-100 text-red-800 px-1 rounded border border-red-200 font-bold truncate">
                             {conflictos.mensajeDocente || `Aula ocupada: ${conflictos.grupoConflictivo}`}
                         </div>
                     )}
 
-                    {/* --- TU SELECTOR ORIGINAL DE T / L --- */}
+                    {/* --- SELECTOR ORIGINAL (BOTONES T / L) --- */}
                     <div className="flex gap-1 mt-1">
                          <button 
                             onPointerDown={(e) => e.stopPropagation()}
                             onClick={() => onTipoChange(id, 'T')}
-                            className={`flex-1 text-[8px] font-bold py-0.5 rounded border transition-colors ${
+                            className={`flex-1 flex justify-center py-0.5 rounded text-[8px] font-bold border transition-colors ${
                                 asignacion.tipo === 'T' 
                                 ? 'bg-blue-600 text-white border-blue-700 shadow-sm' 
                                 : 'bg-white/50 text-gray-500 border-gray-300 hover:bg-white'
@@ -133,12 +132,12 @@ export function DroppableCell({
                             T
                         </button>
                         
-                        {/* Solo muestra L si la materia tiene horas de lab */}
+                        {/* Solo muestra L si la materia tiene horas de laboratorio */}
                         {(asignacion.materia.horasL > 0) && (
                             <button 
                                 onPointerDown={(e) => e.stopPropagation()}
                                 onClick={() => onTipoChange(id, 'L')}
-                                className={`flex-1 text-[8px] font-bold py-0.5 rounded border transition-colors ${
+                                className={`flex-1 flex justify-center py-0.5 rounded text-[8px] font-bold border transition-colors ${
                                     asignacion.tipo === 'L' 
                                     ? 'bg-purple-600 text-white border-purple-700 shadow-sm' 
                                     : 'bg-white/50 text-gray-500 border-gray-300 hover:bg-white'
