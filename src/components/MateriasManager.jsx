@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { X, Save, Plus, Search, Trash2, BookOpen, Copy } from 'lucide-react';
 
-const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios }) => {
+// AÑADIMOS LA PROP 'carreras'
+const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios, carreras = [] }) => {
   const [filtro, setFiltro] = useState('');
   const [editingMateria, setEditingMateria] = useState(null);
 
-  // 1. CALCULOS (Siempre primero)
   const materiasFiltradas = useMemo(() => {
     const term = (filtro || "").toLowerCase();
     return (materias || []).filter(m => 
@@ -14,33 +14,28 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios }) =>
     ).slice(0, 50);
   }, [materias, filtro]);
 
-  // 2. RETURN CHECK
   if (!isOpen) return null;
 
   const handleSave = () => {
       if (!editingMateria.codigo || !editingMateria.nombre) return alert("Código y Nombre requeridos");
-      
+      if (!editingMateria.carrera) return alert("Debes seleccionar una Carrera");
+
       setPlanEstudios(prev => {
           const safePrev = prev || [];
-          // Si estamos editando uno existente (misma referencia de objeto)
-          // PERO ojo, aquí el código puede repetirse en varias carreras.
-          // Necesitamos saber si estamos ACTUALIZANDO uno existente o CREANDO uno nuevo.
-          // Usaremos una comparación estricta de objetos si es posible, o buscaremos por index.
-          
-          // Simplificación: Si el usuario cambia la carrera, se crea uno nuevo si le da a "Clonar", 
-          // pero aquí estamos guardando. Asumiremos que si coincide Codigo Y Carrera es el mismo.
-          
-          const index = safePrev.findIndex(m => m.codigo === editingMateria.codigo && m.carrera === editingMateria.originalCarrera);
-          
-          if (index >= 0 && !editingMateria.isClone) {
+          if (editingMateria.isClone) {
+              const { isClone, originalCarrera, ...data } = editingMateria;
+              return [...safePrev, data];
+          }
+          const index = safePrev.findIndex(m => 
+              m.codigo === editingMateria.codigo && 
+              m.carrera === editingMateria.originalCarrera
+          );
+          if (index >= 0) {
               const newArr = [...safePrev];
-              // Quitamos propiedad temporal
-              const { originalCarrera, ...data } = editingMateria;
+              const { originalCarrera, isClone, ...data } = editingMateria;
               newArr[index] = data;
               return newArr;
           }
-          
-          // Es nuevo o clonado
           const { originalCarrera, isClone, ...data } = editingMateria;
           return [...safePrev, data];
       });
@@ -48,25 +43,23 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios }) =>
   };
 
   const handleClone = () => {
-      // Prepara una copia para guardarla como nueva entrada
       setEditingMateria(prev => ({
           ...prev,
-          carrera: "", // Limpiar carrera para obligar a escribir la nueva
-          isClone: true, // Marcador para saber que es nuevo
-          originalCarrera: null // Romper vínculo
+          carrera: "", 
+          isClone: true, 
+          originalCarrera: null 
       }));
-      alert("Materia clonada. Escribe la nueva carrera y guarda.");
+      alert("Materia duplicada. Selecciona la nueva carrera y guarda.");
   };
 
   const handleDelete = () => {
-      if(window.confirm("¿Eliminar esta materia de esta carrera?")) {
+      if(window.confirm(`¿Eliminar ${editingMateria.nombre} de ${editingMateria.carrera}?`)) {
           setPlanEstudios(prev => prev.filter(m => !(m.codigo === editingMateria.codigo && m.carrera === editingMateria.carrera)));
           setEditingMateria(null);
       }
   };
 
   const startEditing = (m) => {
-      // Guardamos la carrera original para poder encontrarlo en el array luego
       setEditingMateria({ ...m, originalCarrera: m.carrera, isClone: false });
   };
 
@@ -74,7 +67,6 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios }) =>
     <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white w-full max-w-6xl h-[85vh] rounded-xl shadow-2xl flex overflow-hidden animate-in fade-in zoom-in duration-200">
         
-        {/* IZQUIERDA: LISTA */}
         <div className="w-1/3 border-r bg-gray-50 flex flex-col">
             <div className="p-4 border-b bg-white">
                 <div className="flex justify-between items-center mb-2">
@@ -106,7 +98,6 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios }) =>
             </div>
         </div>
 
-        {/* DERECHA: EDICION */}
         <div className="flex-1 flex flex-col bg-white">
             <div className="p-4 bg-gray-100 border-b flex justify-between items-center shadow-sm">
                 <h3 className="font-bold text-xl text-gray-800">
@@ -127,15 +118,32 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios }) =>
                             <input className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" value={editingMateria.nombre} onChange={e => setEditingMateria({...editingMateria, nombre: e.target.value})}/>
                         </div>
                     </div>
+                    
+                    {/* SELECTOR DE CARRERA ESTANDARIZADO */}
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Carrera (Facultad/Programa)</label>
-                        <input className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-900" 
-                               value={editingMateria.carrera} 
-                               onChange={e => setEditingMateria({...editingMateria, carrera: e.target.value})}
-                               placeholder="Ej: Lic. en Ingeniería de Sistemas"
-                        />
-                        <p className="text-[10px] text-gray-400 mt-1">Si esta materia se da en varias carreras, usa el botón "Clonar" para crear copias.</p>
+                        {carreras.length > 0 ? (
+                            <select 
+                                className="w-full p-2 border rounded font-bold text-blue-900 bg-white"
+                                value={editingMateria.carrera} 
+                                onChange={e => setEditingMateria({...editingMateria, carrera: e.target.value})}
+                            >
+                                <option value="">-- Seleccionar Carrera --</option>
+                                {carreras.map(c => (
+                                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <div className="text-red-500 text-xs p-2 bg-red-50 rounded border border-red-100">
+                                ⚠️ No hay carreras registradas en el sistema.
+                            </div>
+                        )}
+                        
+                        {!editingMateria.isClone && (
+                            <p className="text-[10px] text-gray-400 mt-1">Usa "Clonar" para llevar esta materia a otra carrera.</p>
+                        )}
                     </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Año</label>
