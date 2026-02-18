@@ -69,7 +69,7 @@ function App() {
   const opcionesConfig = useMemo(() => {
     const safePlan = Array.isArray(planEstudios) ? planEstudios : [];
     return { 
-        carreras: [], 
+        carreras: [], // Se pasa directamente la prop 'carreras' al ConfigPanel
         anios: [...new Set(safePlan.map(m => m.anio))].sort(),
         semestres: [...new Set(safePlan.map(m => m.semestre).filter(s => s && s !== '0'))].sort()
     };
@@ -87,6 +87,7 @@ function App() {
         const mCarrera = cleanText(m.carrera);
         const coincideCarrera = mCarrera === carreraSel || mCarrera.includes(carreraSel);
 
+        // Lógica de filtrado según tipo de horario
         if (activeTab.tipo === 'service') {
             return coincideCarrera;
         } else {
@@ -134,7 +135,6 @@ function App() {
         Object.entries(tab?.horario || {}).forEach(([cellId, asignacion]) => {
             if (asignacion?.docente?.id) {
                 if (!docentesMap[cellId]) docentesMap[cellId] = [];
-                // 🟢 AHORA GUARDAMOS TAB_ID PARA PODER BUSCAR EL NOMBRE DESPUÉS
                 const codigoMat = cleanCode(asignacion.materia?.codigo);
                 docentesMap[cellId].push(`${tab.id}:${asignacion.docente.id}:${codigoMat}`);
             }
@@ -179,14 +179,12 @@ function App() {
 
       if (asignacion.docente?.id) {
           const ocupados = ocupacionGlobal.docentes[cellId] || [];
-          // Buscar choque
           const choqueStr = ocupados.find(e => e.split(':')[1] === asignacion.docente.id.toString() && e.split(':')[0]?.toString() !== activeTabId?.toString());
           
           if (choqueStr) {
               const tabIdConflictivo = choqueStr.split(':')[0];
               const culpableTab = (Array.isArray(tabs) ? tabs : []).find(t => t?.id?.toString() === tabIdConflictivo.toString());
               errores.docente = true; 
-              // 🟢 MENSAJE CON NOMBRE EXACTO DEL GRUPO
               errores.mensajeDocente = `Ocupado en: ${culpableTab?.nombre || 'Otro grupo'}`;
           }
       }
@@ -257,6 +255,7 @@ function App() {
       setDocentes(docs);
 
       const uniqueCarreras = [...new Set(mats.map(m => m.carrera).filter(Boolean))].sort();
+      // Al importar por primera vez, asumimos que son FII
       const carrerasObjs = uniqueCarreras.map((c, i) => ({ id: Date.now() + i, nombre: c, tipo: 'FII' }));
       setCarreras(carrerasObjs);
 
@@ -291,7 +290,7 @@ function App() {
       {isModalOpen && <ConfigPanel 
             opciones={opcionesConfig} 
             seleccion={tempConfig} 
-            carreras={carreras} 
+            carreras={carreras} // El panel filtra internamente basado en 'tipo'
             onChange={(field, val) => setTempConfig(prev => ({ ...prev, [field]: val }))} 
             onConfirm={() => {
                 const nombre = tempConfig.nombreGrupo.trim().toUpperCase();
@@ -316,7 +315,7 @@ function App() {
       
       <CarrerasManager isOpen={showCarrerasMgr} onClose={()=>setShowCarrerasMgr(false)} carreras={carreras} setCarreras={setCarreras} materias={planEstudios} />
 
-      {showMonitor && <TeacherMonitor docentes={docentes} tabs={tabs} onClose={() => setShowMonitor(false)} />}
+      {showMonitor && <TeacherMonitor docentes={docentes} tabs={tabs} statsDocentes={statsDocentes} onClose={() => setShowMonitor(false)} />}
 
       {(!tabs || tabs.length === 0 || !activeTab) ? (
           <div className="flex flex-col h-screen bg-gray-50 items-center justify-center relative">
@@ -471,7 +470,6 @@ function App() {
                                                     const doc = safeDocentes.find(d => d.id.toString() === docId.toString()) || null;
                                                     
                                                     if (doc) {
-                                                        // 1. Detección de todas las celdas afectadas
                                                         const currentMateriaCode = cleanCode(activeHorario[cid]?.materia?.codigo);
                                                         const celdasAfectadas = Object.entries(activeHorario)
                                                             .filter(([_, asign]) => cleanCode(asign.materia?.codigo) === currentMateriaCode)
@@ -479,7 +477,6 @@ function App() {
 
                                                         let fusionDetectada = false;
 
-                                                        // 2. Verificar conflictos en TODAS las celdas afectadas
                                                         for (const cellKey of celdasAfectadas) {
                                                             const ocupados = ocupacionGlobal.docentes[cellKey] || [];
                                                             const conflicto = ocupados.find(e => {
@@ -491,10 +488,7 @@ function App() {
                                                                 const parts = conflicto.split(':');
                                                                 const tabIdConflictivo = parts[0];
                                                                 const materiaConflictiva = parts[2];
-                                                                
-                                                                // 🟢 BUSCAR NOMBRE DEL GRUPO (TAB)
                                                                 const grupoConflictivo = tabs.find(t => t.id.toString() === tabIdConflictivo.toString())?.nombre || "Otro grupo";
-
                                                                 const [dia, bloqueId] = cellKey.split('-');
                                                                 const bloqueInfo = bloquesHorarios.find(b => b.id === bloqueId);
                                                                 const horarioTexto = `${dia} ${bloqueInfo?.inicio}`;
@@ -503,12 +497,10 @@ function App() {
                                                                     alert(`⛔ CHOQUE IMPOSIBLE\n\nNo se puede asignar a ${doc.nombre}.\n\nEl ${horarioTexto} ya está en el grupo "${grupoConflictivo}" impartiendo OTRA materia (${materiaConflictiva}).`);
                                                                     return;
                                                                 }
-                                                                // Guardamos info para preguntar después (solo si es la misma materia)
                                                                 fusionDetectada = { grupo: grupoConflictivo, dia: horarioTexto };
                                                             }
                                                         }
 
-                                                        // 3. Confirmar Fusión (Si es la misma materia)
                                                         if (fusionDetectada) {
                                                             if (!window.confirm(`⚠️ FUSIÓN DETECTADA\n\nEl docente ${doc.nombre} ya imparte esta materia en el grupo "${fusionDetectada.grupo}" (${fusionDetectada.dia}).\n\n¿Deseas fusionar ambos grupos?`)) {
                                                                 return;
@@ -516,7 +508,6 @@ function App() {
                                                         }
                                                     }
                                                     
-                                                    // 4. Actualizar
                                                     const cell = activeHorario[cid];
                                                     updateActiveHorario(prev => {
                                                         const newH = {...prev};
