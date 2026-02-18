@@ -1,172 +1,130 @@
 import React, { useState, useMemo } from 'react';
-import { Search, User, X } from 'lucide-react';
+import { X, Search, FileDown } from 'lucide-react';
+import { downloadTeacherSchedule } from '../utils/exporters';
 
+// ... (dias y bloquesHorarios se pueden importar o redefinir) ...
 const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const bloquesHorarios = [
-    { id: "1", inicio: "7:00", fin: "7:45" }, { id: "2", inicio: "7:50", fin: "8:35" },
-    { id: "3", inicio: "8:40", fin: "9:25" }, { id: "4", inicio: "9:30", fin: "10:15" },
-    { id: "5", inicio: "10:20", fin: "11:05" }, { id: "6", inicio: "11:10", fin: "11:55" },
-    { id: "7", inicio: "12:00", fin: "12:45" }, { id: "8", inicio: "12:50", fin: "1:35" },
-    { id: "9", inicio: "1:40", fin: "2:25" }, { id: "10", inicio: "2:30", fin: "3:15" },
-    { id: "11", inicio: "3:20", fin: "4:05" }, { id: "12", inicio: "4:10", fin: "4:55" },
-    { id: "13", inicio: "5:00", fin: "5:45" }, { id: "14", inicio: "5:50", fin: "6:35" },
-    { id: "15", inicio: "6:40", fin: "7:25" }, { id: "16", inicio: "7:30", fin: "8:15" },
-    { id: "17", inicio: "8:20", fin: "9:05" }, { id: "18", inicio: "9:10", fin: "9:55" },
+    { id: "1", inicio: "7:00 AM", fin: "7:45 AM" }, { id: "2", inicio: "7:50 AM", fin: "8:35 AM" },
+    { id: "3", inicio: "8:40 AM", fin: "9:25 AM" }, { id: "4", inicio: "9:30 AM", fin: "10:15 AM" },
+    { id: "5", inicio: "10:20 AM", fin: "11:05 AM" }, { id: "6", inicio: "11:10 AM", fin: "11:55 AM" },
+    { id: "7", inicio: "12:00 PM", fin: "12:45 PM" }, { id: "8", inicio: "12:50 PM", fin: "1:35 PM" },
+    { id: "9", inicio: "1:40 PM", fin: "2:25 PM" }, { id: "10", inicio: "2:30 PM", fin: "3:15 PM" },
+    { id: "11", inicio: "3:20 PM", fin: "4:05 PM" }, { id: "12", inicio: "4:10 PM", fin: "4:55 PM" },
+    { id: "13", inicio: "5:00 PM", fin: "5:45 PM" }, { id: "14", inicio: "5:50 PM", fin: "6:35 PM" },
+    { id: "15", inicio: "6:40 PM", fin: "7:25 PM" }, { id: "16", inicio: "7:30 PM", fin: "8:15 PM" },
+    { id: "17", inicio: "8:20 PM", fin: "9:05 PM" }, { id: "18", inicio: "9:10 PM", fin: "9:55 PM" },
+    { id: "19", inicio: "10:00 PM", fin: "10:45 PM" },
 ];
 
-const TeacherMonitor = ({ docentes, tabs, onClose }) => {
-    const [selectedDocenteId, setSelectedDocenteId] = useState(null);
-    const [search, setSearch] = useState("");
+const TeacherMonitor = ({ docentes = [], tabs = [], onClose }) => {
+    const [selectedDocenteId, setSelectedDocenteId] = useState('');
+    const [filtro, setFiltro] = useState('');
 
-    const docentesList = useMemo(() => {
-        return (docentes || []).filter(d => d.nombre.toLowerCase().includes(search.toLowerCase()));
-    }, [docentes, search]);
+    const filteredDocentes = useMemo(() => {
+        return docentes.filter(d => d.nombre.toLowerCase().includes(filtro.toLowerCase())).slice(0, 50);
+    }, [docentes, filtro]);
 
-    const selectedDocente = useMemo(() => 
-        docentes.find(d => d.id === selectedDocenteId), 
-    [docentes, selectedDocenteId]);
-
-    const ocupacion = useMemo(() => {
-        if (!selectedDocenteId) return {};
-        const map = {};
-
-        tabs.forEach(tab => {
-            if (!tab.horario) return;
-            Object.entries(tab.horario).forEach(([cellId, asignacion]) => {
-                if (asignacion?.docente?.id === selectedDocenteId) {
-                    map[cellId] = {
-                        materia: asignacion.materia?.nombre,
-                        grupo: tab.nombre,
-                        salon: asignacion.salon || 'S/A',
-                        carrera: tab.config?.carrera || (tab.tipo === 'service' ? 'Servicio' : 'Ingeniería')
-                    };
-                }
-            });
-        });
-        return map;
-    }, [tabs, selectedDocenteId]);
-
-    const totalHoras = Object.keys(ocupacion).length;
-    const tope = selectedDocente?.horasTope || 0;
-    const isOver = tope > 0 && totalHoras > tope;
+    const selectedDocente = docentes.find(d => d.id.toString() === selectedDocenteId);
 
     return (
-        <div className="fixed inset-0 bg-gray-100 z-[300] flex flex-col animate-in fade-in duration-200">
-            {/* HEADER MONITOR */}
-            <div className="bg-slate-800 text-white p-4 shadow-lg flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                    <div className="bg-orange-500 p-2 rounded-lg"><User size={24}/></div>
-                    <div>
-                        <h1 className="text-xl font-bold">Monitor de Docentes</h1>
-                        <p className="text-xs text-slate-300 flex items-center gap-1">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> 
-                            Sincronización en Tiempo Real Activa
-                        </p>
-                    </div>
+        <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-6 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-6xl h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                    <h2 className="font-bold text-xl text-blue-900 flex items-center gap-2">Monitor de Profesores</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-red-100 hover:text-red-600 rounded-full"><X/></button>
                 </div>
-                <button onClick={onClose} className="bg-white/10 hover:bg-red-500 hover:text-white p-2 rounded-full transition-all">
-                    <X size={20}/>
-                </button>
-            </div>
 
-            <div className="flex flex-1 overflow-hidden">
-                {/* LISTA DOCENTES */}
-                <div className="w-80 bg-white border-r flex flex-col shadow-md z-10">
-                    <div className="p-4 border-b bg-slate-50">
-                        <div className="relative">
+                <div className="flex flex-1 overflow-hidden">
+                    {/* LISTA LATERAL */}
+                    <div className="w-80 border-r bg-gray-50 flex flex-col p-4">
+                        <div className="relative mb-4">
                             <Search className="absolute left-3 top-2.5 text-gray-400" size={16}/>
                             <input 
-                                className="w-full pl-9 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                                className="w-full pl-10 p-2 border rounded shadow-sm" 
                                 placeholder="Buscar profesor..." 
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
+                                value={filtro}
+                                onChange={e=>setFiltro(e.target.value)}
                             />
                         </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                        {docentesList.map(d => (
-                            <div 
-                                key={d.id} 
-                                onClick={() => setSelectedDocenteId(d.id)}
-                                className={`p-3 border-b cursor-pointer hover:bg-orange-50 transition-colors flex justify-between items-center ${selectedDocenteId === d.id ? 'bg-orange-100 border-l-4 border-l-orange-500' : ''}`}
-                            >
-                                <span className="text-sm font-medium text-slate-700">{d.nombre}</span>
-                                {selectedDocenteId === d.id && <div className="w-2 h-2 bg-orange-500 rounded-full"/>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* HORARIO DOCENTE */}
-                <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden">
-                    {selectedDocente ? (
-                        <>
-                            <div className="bg-white p-4 border-b flex justify-between items-center">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-slate-800">{selectedDocente.nombre}</h2>
-                                    <span className="text-sm text-slate-500">{selectedDocente.clasificacion || "Sin clasificación"}</span>
+                        <div className="flex-1 overflow-y-auto space-y-1">
+                            {filteredDocentes.map(d => (
+                                <div 
+                                    key={d.id} 
+                                    onClick={() => setSelectedDocenteId(d.id.toString())}
+                                    className={`p-3 rounded cursor-pointer text-sm font-medium ${selectedDocenteId === d.id.toString() ? 'bg-blue-600 text-white shadow' : 'bg-white hover:bg-blue-50 text-gray-700'}`}
+                                >
+                                    {d.nombre}
                                 </div>
-                                <div className="flex gap-4 text-sm font-bold">
-                                    <div className={`px-4 py-2 rounded-lg border ${isOver ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
-                                        Carga Actual: {totalHoras} hrs
-                                    </div>
-                                    {tope > 0 && (
-                                        <div className="px-4 py-2 rounded-lg bg-slate-50 text-slate-600 border border-slate-200">
-                                            Límite: {tope} hrs
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex-1 overflow-auto p-6">
-                                <div className="bg-white rounded-xl shadow border border-slate-300 min-w-[800px]">
-                                    <div className="grid grid-cols-7 border-b border-slate-300 bg-slate-50 sticky top-0 z-10">
-                                        <div className="p-3 font-bold text-center text-xs text-slate-500 border-r">HORA</div>
-                                        {dias.map(d => <div key={d} className="p-3 font-bold text-center text-sm text-slate-700 uppercase border-r last:border-r-0">{d}</div>)}
-                                    </div>
-                                    {bloquesHorarios.map((b, i) => (
-                                        <div key={b.id} className="grid grid-cols-7 border-b border-slate-200 min-h-[80px]">
-                                            <div className="p-2 text-xs font-bold text-slate-500 flex flex-col justify-center items-center border-r bg-slate-50">
-                                                <span>{b.inicio}</span>
-                                                <span className="text-slate-300">|</span>
-                                                <span>{b.fin}</span>
-                                            </div>
-                                            {dias.map(d => {
-                                                const id = `${d}-${b.id}`;
-                                                const data = ocupacion[id];
-                                                
-                                                return (
-                                                    <div key={id} className={`border-r last:border-r-0 p-1 relative transition-all ${data ? 'bg-blue-50' : 'bg-white hover:bg-slate-50'}`}>
-                                                        {data ? (
-                                                            <div className="h-full w-full rounded border border-blue-200 bg-white p-2 shadow-sm text-xs flex flex-col justify-between group">
-                                                                <div>
-                                                                    <div className="font-bold text-blue-800 line-clamp-2">{data.materia}</div>
-                                                                    <div className="text-slate-500 font-mono mt-1">{data.grupo}</div>
-                                                                </div>
-                                                                <div className="flex justify-between items-end mt-2 text-[10px] text-slate-400 font-bold uppercase">
-                                                                    <span className="truncate max-w-[80px]">{data.carrera}</span>
-                                                                    <span className="bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">{data.salon}</span>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="h-full w-full flex items-center justify-center opacity-0 hover:opacity-100">
-                                                                <span className="text-xs text-green-500 font-bold bg-green-50 px-2 py-1 rounded-full border border-green-100">LIBRE</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-slate-300">
-                            <User size={80} className="mb-4 opacity-20"/>
-                            <p className="text-lg">Selecciona un profesor para auditar su horario</p>
+                            ))}
                         </div>
-                    )}
+                    </div>
+
+                    {/* VISTA HORARIO */}
+                    <div className="flex-1 p-6 overflow-auto bg-gray-100">
+                        {selectedDocente ? (
+                            <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-gray-800">{selectedDocente.nombre}</h3>
+                                        <span className="text-sm text-gray-500">{selectedDocente.clasificacion}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => downloadTeacherSchedule(selectedDocente, tabs, 'excel')} className="px-3 py-1.5 bg-green-100 text-green-700 rounded text-xs font-bold border border-green-200 hover:bg-green-200 flex items-center gap-2"><FileDown size={14}/> Excel</button>
+                                        <button onClick={() => downloadTeacherSchedule(selectedDocente, tabs, 'pdf')} className="px-3 py-1.5 bg-red-100 text-red-700 rounded text-xs font-bold border border-red-200 hover:bg-red-200 flex items-center gap-2"><FileDown size={14}/> PDF</button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-7 border-b border-gray-300">
+                                    <div className="p-2 font-bold text-center bg-gray-50 text-[10px] uppercase text-gray-400">Hora</div>
+                                    {dias.map(d => <div key={d} className="p-2 font-bold text-center bg-blue-50 text-blue-900 text-xs uppercase border-l border-gray-200">{d}</div>)}
+                                </div>
+
+                                {bloquesHorarios.map(b => (
+                                    <div key={b.id} className="grid grid-cols-7 border-b border-gray-100 min-h-[60px]">
+                                        <div className="p-2 text-[10px] font-bold text-gray-400 bg-gray-50 text-center flex flex-col justify-center">{b.inicio}<br/>{b.fin}</div>
+                                        {dias.map(d => {
+                                            const cellId = `${d}-${b.id}`;
+                                            const grupos = [];
+                                            
+                                            // Buscar en todos los tabs
+                                            tabs.forEach(t => {
+                                                const asignacion = t.horario?.[cellId];
+                                                if (asignacion?.docente?.id.toString() === selectedDocente.id.toString()) {
+                                                    grupos.push({
+                                                        grupo: t.nombre,
+                                                        materia: asignacion.materia.nombre,
+                                                        codigo: asignacion.materia.codigo,
+                                                        salon: asignacion.salon
+                                                    });
+                                                }
+                                            });
+
+                                            // 🟢 RENDERIZADO DE FUSIÓN VISUAL
+                                            if (grupos.length === 0) return <div key={d} className="border-l border-gray-100"></div>;
+
+                                            // Si hay más de 1 grupo, es fusión (o conflicto)
+                                            const esFusion = grupos.length > 1;
+                                            const materia = grupos[0].materia;
+                                            const listaGrupos = grupos.map(g => g.grupo).join(" + ");
+                                            const listaSalones = [...new Set(grupos.map(g => g.salon).filter(Boolean))].join("/");
+
+                                            return (
+                                                <div key={d} className={`border-l border-gray-100 p-1 text-[10px] flex flex-col justify-center items-center text-center ${esFusion ? 'bg-purple-100' : 'bg-blue-50'}`}>
+                                                    <span className="font-bold text-blue-900 leading-tight mb-1">{materia}</span>
+                                                    {esFusion && <span className="bg-purple-600 text-white px-1.5 rounded-[4px] text-[8px] font-bold mb-1">FUSIÓN</span>}
+                                                    <span className="font-mono text-gray-600 font-bold">{listaGrupos}</span>
+                                                    {listaSalones && <span className="text-gray-400 mt-0.5">Aula: {listaSalones}</span>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-gray-400">Selecciona un profesor para ver su horario</div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
