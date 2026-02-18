@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { loadDocentes, loadPlanEstudios } from './utils/csvParser';
-import { LayoutGrid, Search, Calendar, Settings, BookOpen, Plus, X, MapPin, User, Trash2, Building2, Briefcase, FileSpreadsheet, FileText, AlertTriangle, Monitor, Upload } from 'lucide-react';
+import { LayoutGrid, Search, Calendar, Settings, BookOpen, Plus, X, MapPin, User, Trash2, Building2, Briefcase, FileSpreadsheet, FileText, AlertTriangle, Monitor, Upload, GraduationCap } from 'lucide-react';
 
 import { usePersistentState } from './hooks/usePersistentState';
 import { DraggableMateria } from './components/DraggableMateria';
@@ -9,6 +9,7 @@ import { DroppableCell } from './components/DroppableCell';
 import ConfigPanel from './components/ConfigPanel';
 import DocentesManager from './components/DocentesManager';
 import MateriasManager from './components/MateriasManager';
+import CarrerasManager from './components/CarrerasManager';
 import TeacherMonitor from './components/TeacherMonitor';
 import { downloadGroupSchedule } from './utils/exporters';
 import { getMateriaColor } from './utils/colors';
@@ -34,15 +35,16 @@ function App() {
   const [docentes, setDocentes, loadingDocentes] = usePersistentState('fii_docentes', []);
   const [planEstudios, setPlanEstudios, loadingPlan] = usePersistentState('fii_materias', []);
   const [tabs, setTabs, loadingTabs] = usePersistentState('fii_tabs', []);
+  const [carreras, setCarreras, loadingCarreras] = usePersistentState('fii_carreras', []);
   
   const [activeTabId, setActiveTabId] = useState(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [showDocentesMgr, setShowDocentesMgr] = useState(false);
   const [showMateriasMgr, setShowMateriasMgr] = useState(false);
+  const [showCarrerasMgr, setShowCarrerasMgr] = useState(false);
   const [showMonitor, setShowMonitor] = useState(false);
   
   const [tempConfig, setTempConfig] = useState({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular', facultad: '' });
-  const [newServiceMateria, setNewServiceMateria] = useState({ codigo: '', nombre: '', horasT: 4, horasL: 0 });
   const [activeMateria, setActiveMateria] = useState(null); 
   const [filtroMateria, setFiltroMateria] = useState("");
   const [isEditingTab, setIsEditingTab] = useState(false);
@@ -67,7 +69,7 @@ function App() {
   const opcionesConfig = useMemo(() => {
     const safePlan = Array.isArray(planEstudios) ? planEstudios : [];
     return { 
-        carreras: [...new Set(safePlan.map(m => m.carrera))].sort(),
+        carreras: [], 
         anios: [...new Set(safePlan.map(m => m.anio))].sort(),
         semestres: [...new Set(safePlan.map(m => m.semestre).filter(s => s && s !== '0'))].sort()
     };
@@ -75,30 +77,32 @@ function App() {
 
   const materiasDisponibles = useMemo(() => {
     if (!activeTab) return [];
-    if (activeTab.tipo === 'service') return activeTab.customMaterias || [];
     
     const carreraSel = cleanText(currentConfig.carrera);
-    const anioSel = cleanText(currentConfig.anio);
-    const semSel = cleanText(currentConfig.semestre);
     const filtroNombre = cleanText(filtroMateria);
     const filtroCodigo = cleanCode(filtroMateria);
-
     const safePlan = Array.isArray(planEstudios) ? planEstudios : [];
 
     const filtradasPorConfig = safePlan.filter(m => {
         const mCarrera = cleanText(m.carrera);
-        const mAnio = cleanText(m.anio);
-        const mSem = cleanText(m.semestre);
-        
         const coincideCarrera = mCarrera === carreraSel || mCarrera.includes(carreraSel);
-        const coincideAnio = mAnio === anioSel;
-        let coincideSem = mSem === '0' ? (semSel === '1' || semSel === '2') : (mSem === semSel);
-        if(!mSem) coincideSem = true;
 
-        return coincideCarrera && coincideAnio && coincideSem;
+        if (activeTab.tipo === 'service') {
+            return coincideCarrera;
+        } else {
+            const mAnio = cleanText(m.anio);
+            const mSem = cleanText(m.semestre);
+            const anioSel = cleanText(currentConfig.anio);
+            const semSel = cleanText(currentConfig.semestre);
+            
+            const coincideAnio = mAnio === anioSel;
+            let coincideSem = mSem === '0' ? (semSel === '1' || semSel === '2') : (mSem === semSel);
+            if(!mSem) coincideSem = true;
+
+            return coincideCarrera && coincideAnio && coincideSem;
+        }
     });
 
-    // 🟢 LÓGICA DE FILTRADO: Búsqueda por Nombre/Código y Eliminación de Duplicados
     const unicas = new Map();
     filtradasPorConfig.forEach(m => {
         const mNombre = cleanText(m.nombre);
@@ -173,7 +177,6 @@ function App() {
 
       if (asignacion.docente?.id) {
           const ocupados = ocupacionGlobal.docentes[cellId] || [];
-          // 🟢 CORRECCIÓN: Convertir a String para comparar IDs numéricos (Manuales) con IDs de texto (CSV)
           const choque = ocupados.some(e => e.split(':')[1] === asignacion.docente.id.toString() && e.split(':')[0]?.toString() !== activeTabId?.toString());
           if (choque) {
               const culpableId = ocupados.find(e => e.split(':')[1] === asignacion.docente.id.toString()).split(':')[0];
@@ -247,7 +250,12 @@ function App() {
       const docs = await loadDocentes(mats);
       setPlanEstudios(mats);
       setDocentes(docs);
-      alert("¡Nube sincronizada!");
+
+      const uniqueCarreras = [...new Set(mats.map(m => m.carrera).filter(Boolean))].sort();
+      const carrerasObjs = uniqueCarreras.map((c, i) => ({ id: Date.now() + i, nombre: c, tipo: 'FII' }));
+      setCarreras(carrerasObjs);
+
+      alert("¡Nube sincronizada! Carreras extraídas automáticamente.");
   };
 
   const handleResetData = () => {
@@ -255,10 +263,11 @@ function App() {
         setTabs([]);
         setDocentes([]);
         setPlanEstudios([]);
+        setCarreras([]); 
       }
   };
 
-  if (loadingDocentes || loadingPlan || loadingTabs) {
+  if (loadingDocentes || loadingPlan || loadingTabs || loadingCarreras) {
       return (
         <div className="flex flex-col h-screen items-center justify-center bg-gray-50 gap-4">
             <div className="w-12 h-12 border-4 border-[#F2BD1D] border-t-transparent rounded-full animate-spin"></div>
@@ -267,31 +276,47 @@ function App() {
       );
   }
 
+  // Separamos los tabs
+  const regularTabs = (tabs || []).filter(t => t.tipo !== 'service');
+  const serviceTabs = (tabs || []).filter(t => t.tipo === 'service');
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       
-      {isModalOpen && <ConfigPanel opciones={opcionesConfig} seleccion={tempConfig} onChange={(field, val) => setTempConfig(prev => ({ ...prev, [field]: val }))} onConfirm={() => {
-          const nombre = tempConfig.nombreGrupo.trim().toUpperCase();
-          if (!nombre) return alert("Escribe un nombre");
-          const tabData = { nombre, tipo: tempConfig.tipo, config: { ...tempConfig } };
-          
-          if (isEditingTab && activeTabId) {
-              setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, ...tabData } : t));
-          } else {
-              const newId = Date.now();
-              setTabs(prev => [...(prev || []), { id: newId, ...tabData, horario: {}, customMaterias: [] }]);
-              setActiveTabId(newId);
-          }
-          setModalOpen(false);
-      }} onCancel={() => setModalOpen(false)} />}
+      {isModalOpen && <ConfigPanel 
+            opciones={opcionesConfig} 
+            seleccion={tempConfig} 
+            carreras={carreras} 
+            onChange={(field, val) => setTempConfig(prev => ({ ...prev, [field]: val }))} 
+            onConfirm={() => {
+                const nombre = tempConfig.nombreGrupo.trim().toUpperCase();
+                if (!nombre) return alert("Escribe un nombre");
+                const tabData = { nombre, tipo: tempConfig.tipo, config: { ...tempConfig } };
+                
+                if (isEditingTab && activeTabId) {
+                    setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, ...tabData } : t));
+                } else {
+                    const newId = Date.now();
+                    setTabs(prev => [...(prev || []), { id: newId, ...tabData, horario: {}, customMaterias: [] }]);
+                    setActiveTabId(newId);
+                }
+                setModalOpen(false);
+            }} 
+            onCancel={() => setModalOpen(false)} 
+        />}
 
       <DocentesManager isOpen={showDocentesMgr} onClose={()=>setShowDocentesMgr(false)} docentes={docentes} setDocentes={setDocentes} materias={planEstudios} statsDocentes={statsDocentes} tabs={tabs} />
-      <MateriasManager isOpen={showMateriasMgr} onClose={()=>setShowMateriasMgr(false)} materias={planEstudios} setPlanEstudios={setPlanEstudios} />
+      
+      <MateriasManager isOpen={showMateriasMgr} onClose={()=>setShowMateriasMgr(false)} materias={planEstudios} setPlanEstudios={setPlanEstudios} carreras={carreras} />
+      
+      <CarrerasManager isOpen={showCarrerasMgr} onClose={()=>setShowCarrerasMgr(false)} carreras={carreras} setCarreras={setCarreras} materias={planEstudios} />
+
       {showMonitor && <TeacherMonitor docentes={docentes} tabs={tabs} onClose={() => setShowMonitor(false)} />}
 
       {(!tabs || tabs.length === 0 || !activeTab) ? (
           <div className="flex flex-col h-screen bg-gray-50 items-center justify-center relative">
               <div className="absolute top-5 right-5 flex gap-2 items-center">
+                  <button onClick={() => setShowCarrerasMgr(true)} className="flex items-center gap-2 text-slate-700 font-bold bg-white px-4 py-2 rounded shadow-sm border border-slate-200"><GraduationCap size={18}/> Carreras</button>
                   <button onClick={() => setShowMonitor(true)} className="flex items-center gap-2 text-slate-700 font-bold bg-white px-4 py-2 rounded shadow-sm border border-slate-200"><Monitor size={18}/> Monitor</button>
                   <button onClick={handleResetData} className="text-red-400 hover:text-red-600 text-xs px-3 py-1 font-bold"><Trash2 size={12}/> Reset</button>
               </div>
@@ -317,9 +342,10 @@ function App() {
                         <h1 className="font-bold flex items-center gap-2"><LayoutGrid size={18}/> Panel</h1>
                         <button onClick={() => setShowMonitor(true)} className="bg-white/20 p-1.5 rounded"><Monitor size={16}/></button>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => setShowDocentesMgr(true)} className="flex-1 bg-white/20 py-1.5 rounded text-xs font-bold border border-white/10 hover:bg-white/30 transition-all">DOCENTES</button>
-                        <button onClick={() => setShowMateriasMgr(true)} className="flex-1 bg-white/20 py-1.5 rounded text-xs font-bold border border-white/10 hover:bg-white/30 transition-all">MATERIAS</button>
+                    <div className="flex gap-1 overflow-x-auto pb-1">
+                        <button onClick={() => setShowDocentesMgr(true)} className="flex-1 bg-white/20 py-1.5 rounded text-xs font-bold border border-white/10 hover:bg-white/30 transition-all min-w-[70px]">DOCENTES</button>
+                        <button onClick={() => setShowMateriasMgr(true)} className="flex-1 bg-white/20 py-1.5 rounded text-xs font-bold border border-white/10 hover:bg-white/30 transition-all min-w-[70px]">MATERIAS</button>
+                        <button onClick={() => setShowCarrerasMgr(true)} className="flex-1 bg-white/20 py-1.5 rounded text-xs font-bold border border-white/10 hover:bg-white/30 transition-all min-w-[70px]">CARRERAS</button>
                     </div>
                 </div>
                 
@@ -330,54 +356,50 @@ function App() {
                     </div>
                 </div>
 
-                {activeTab.tipo === 'service' ? (
-                     <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
-                        <div className="p-3 bg-purple-100 border-b border-purple-200">
-                            <h3 className="text-xs font-bold text-purple-800 mb-2 uppercase flex items-center gap-1"><Plus size={12}/> Materia Manual</h3>
-                            <input className="w-full text-xs p-2 rounded border mb-2 outline-none focus:ring-1 focus:ring-purple-500" placeholder="Código" value={newServiceMateria.codigo} onChange={e=>setNewServiceMateria({...newServiceMateria, codigo: e.target.value})} />
-                            <input className="w-full text-xs p-2 rounded border mb-2 outline-none focus:ring-1 focus:ring-purple-500" placeholder="Nombre" value={newServiceMateria.nombre} onChange={e=>setNewServiceMateria({...newServiceMateria, nombre: e.target.value})} />
-                            <div className="flex gap-2 mb-2">
-                                <div className="flex-1"><span className="text-[10px] font-bold text-gray-500 block">Hrs T</span><input type="number" className="w-full text-xs p-1 rounded border text-center" value={newServiceMateria.horasT} onChange={e=>setNewServiceMateria({...newServiceMateria, horasT: e.target.value})}/></div>
-                                <div className="flex-1"><span className="text-[10px] font-bold text-gray-500 block">Hrs L</span><input type="number" className="w-full text-xs p-1 rounded border text-center" value={newServiceMateria.horasL} onChange={e=>setNewServiceMateria({...newServiceMateria, horasL: e.target.value})}/></div>
-                            </div>
-                            <button onClick={() => {
-                                if (!newServiceMateria.codigo || !newServiceMateria.nombre) return alert("Datos incompletos");
-                                const nueva = { ...newServiceMateria, horasT: parseInt(newServiceMateria.horasT)||0, horasL: parseInt(newServiceMateria.horasL)||0, semestre: "SERV" };
-                                setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, customMaterias: [...(t.customMaterias || []), nueva] } : t));
-                                setNewServiceMateria({ codigo: '', nombre: '', horasT: 4, horasL: 0 });
-                            }} className="w-full bg-purple-600 text-white text-xs font-bold py-1.5 rounded hover:bg-purple-700">Agregar</button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                            {(activeTab.customMaterias || []).map(mat => (
-                                <div key={mat.codigo} className="group relative">
-                                    <DraggableMateria materia={mat} horasAsignadas={Object.values(activeHorario).filter(h => h?.materia?.codigo === mat.codigo).length}/>
-                                    <button onClick={()=>setTabs(prev => prev.map(t => t.id === activeTabId ? {...t, customMaterias: t.customMaterias.filter(m => m.codigo !== mat.codigo)} : t))} className="absolute top-1 right-1 text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 bg-white rounded-full"><X size={14}/></button>
-                                </div>
-                            ))}
-                        </div>
-                     </div>
-                ) : (
-                    <>
-                        <div className="p-2 border-b bg-gray-50 relative"><Search className="absolute left-3 top-2.5 text-gray-400" size={16}/><input type="text" placeholder="Buscar materia (Nombre o Código)..." className="w-full pl-9 py-2 text-sm border rounded focus:ring-1 focus:ring-[#F2BD1D] outline-none" value={filtroMateria} onChange={e=>setFiltroMateria(e.target.value)}/></div>
-                        <div className="flex-1 overflow-y-auto p-2 bg-gray-50 space-y-2">
-                            {materiasDisponibles.map(mat => {
-                                const asignadas = Object.values(activeHorario).filter(h => h?.materia?.codigo === mat.codigo).length;
-                                return <DraggableMateria key={mat.codigo} materia={mat} horasAsignadas={asignadas}/>;
-                            })}
-                        </div>
-                    </>
-                )}
+                <div className="p-2 border-b bg-gray-50 relative"><Search className="absolute left-3 top-2.5 text-gray-400" size={16}/><input type="text" placeholder="Buscar materia (Nombre o Código)..." className="w-full pl-9 py-2 text-sm border rounded focus:ring-1 focus:ring-[#F2BD1D] outline-none" value={filtroMateria} onChange={e=>setFiltroMateria(e.target.value)}/></div>
+                <div className="flex-1 overflow-y-auto p-2 bg-gray-50 space-y-2">
+                    {materiasDisponibles.length === 0 ? (
+                        <p className="text-center text-xs text-gray-400 mt-10 p-4">
+                            {activeTab.tipo === 'service' 
+                                ? `No hay materias registradas para la carrera "${currentConfig.carrera}".`
+                                : "No se encontraron materias con estos filtros."}
+                        </p>
+                    ) : (
+                        materiasDisponibles.map(mat => {
+                            const asignadas = Object.values(activeHorario).filter(h => h?.materia?.codigo === mat.codigo).length;
+                            return <DraggableMateria key={mat.codigo} materia={mat} horasAsignadas={asignadas}/>;
+                        })
+                    )}
+                </div>
             </div>
 
             <div className="flex-1 flex flex-col h-screen overflow-hidden">
-                <div className="bg-gray-200 px-2 pt-2 flex gap-1 overflow-x-auto border-b">
-                    {(Array.isArray(tabs) ? tabs : []).map(tab => (
-                        <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={`px-4 py-2 rounded-t-lg text-sm font-bold flex items-center gap-3 cursor-pointer min-w-[140px] justify-between border-t border-x ${activeTabId?.toString() === tab.id?.toString() ? 'bg-white border-gray-300 z-10' : 'bg-gray-300 text-gray-600'}`}>
-                            <span className="truncate">{tab.nombre}</span>
-                            <button onClick={(e) => { e.stopPropagation(); if(window.confirm("¿Cerrar?")) { const nt = tabs.filter(t=>t.id!==tab.id); setTabs(nt); setActiveTabId(nt[0]?.id || null); } }}><X size={12}/></button>
+                <div className="border-b border-gray-300">
+                    
+                    {/* FILA 1: FACULTAD (Regular) */}
+                    <div className="bg-gray-100 px-2 pt-2 flex gap-1 overflow-x-auto items-center">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-2 select-none">Facultad</span>
+                        {regularTabs.map(tab => (
+                            <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={`px-4 py-2 rounded-t-lg text-sm font-bold flex items-center gap-3 cursor-pointer min-w-[140px] justify-between border-t border-x ${activeTabId?.toString() === tab.id?.toString() ? 'bg-white border-gray-300 z-10' : 'bg-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                <span className="truncate">{tab.nombre}</span>
+                                <button onClick={(e) => { e.stopPropagation(); if(window.confirm("¿Cerrar?")) { const nt = tabs.filter(t=>t.id!==tab.id); setTabs(nt); setActiveTabId(nt[0]?.id || null); } }}><X size={12}/></button>
+                            </div>
+                        ))}
+                        <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setIsEditingTab(false); setModalOpen(true); }} className="px-2 py-1 rounded hover:bg-[#F2BD1D] text-gray-500 hover:text-white transition-colors ml-1"><Plus size={16}/></button>
+                    </div>
+
+                    {/* FILA 2: EXTERNOS (Servicio) */}
+                    {serviceTabs.length > 0 && (
+                        <div className="bg-purple-50 px-2 py-1 flex gap-1 overflow-x-auto items-center border-t border-gray-200 shadow-inner">
+                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider mr-2 select-none">Externos</span>
+                            {serviceTabs.map(tab => (
+                                <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={`px-3 py-1 rounded text-xs font-bold flex items-center gap-2 cursor-pointer border ${activeTabId?.toString() === tab.id?.toString() ? 'bg-white border-purple-300 text-purple-900 shadow-sm' : 'bg-purple-100 text-purple-600 border-transparent hover:bg-purple-200'}`}>
+                                    <span className="truncate flex items-center gap-1"><Briefcase size={12}/> {tab.nombre}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); if(window.confirm("¿Cerrar?")) { const nt = tabs.filter(t=>t.id!==tab.id); setTabs(nt); setActiveTabId(nt[0]?.id || null); } }} className="hover:text-red-500"><X size={10}/></button>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                    <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setIsEditingTab(false); setModalOpen(true); }} className="px-3 py-2 rounded-t-lg bg-gray-300 hover:bg-[#F2BD1D]">+</button>
+                    )}
                 </div>
 
                 <div className="bg-white p-4 border-b flex justify-between items-center">
@@ -405,23 +427,22 @@ function App() {
                                     const cod = asignacion ? cleanCode(asignacion.materia.codigo) : "";
                                     const nom = asignacion ? cleanText(asignacion.materia.nombre) : "";
 
-                                    let docsFiltrados = [];
-                                    if (activeTab.tipo === 'service') {
-                                        docsFiltrados = [...safeDocentes].sort((a,b) => a.nombre.localeCompare(b.nombre));
-                                    } else {
-                                        const recomendados = safeDocentes.filter(d => d.materias?.some(m => {
-                                            const mc = cleanCode(m.codigo);
-                                            const mn = cleanText(m.nombre);
-                                            return (mc && mc === cod) || (mn && nom && (mn.includes(nom) || nom.includes(mn)));
-                                        }));
-                                        const otros = safeDocentes.filter(d => !recomendados.includes(d)).sort((a,b) => a.nombre.localeCompare(b.nombre));
-                                        docsFiltrados = [...recomendados, {id:'sep',nombre:'---',disabled:true}, ...otros];
-                                    }
+                                    // 🟢 LÓGICA UNIFICADA Y MEJORADA DE DOCENTES
+                                    const recomendados = safeDocentes.filter(d => d.materias?.some(m => {
+                                        const mc = cleanCode(m.codigo);
+                                        const mn = cleanText(m.nombre);
+                                        // Buscar por Código (Exacto) O Nombre (Parcial)
+                                        return (mc && mc === cod) || (mn && nom && (mn.includes(nom) || nom.includes(mn)));
+                                    }));
+                                    
+                                    const otros = safeDocentes.filter(d => !recomendados.includes(d)).sort((a,b) => a.nombre.localeCompare(b.nombre));
+                                    
+                                    const docsFiltrados = [...recomendados, {id:'sep',nombre:'──── OTROS ────',disabled:true}, ...otros];
 
                                     let isDocenteOverloaded = false;
                                     if (asignacion?.docente?.id) {
                                         const docId = asignacion.docente.id;
-                                        const currentDoc = safeDocentes.find(d => d.id.toString() === docId.toString()); // 🟢 Ajuste aquí también
+                                        const currentDoc = safeDocentes.find(d => d.id.toString() === docId.toString());
                                         if (currentDoc) {
                                             const totalHoras = statsDocentes[docId] || 0;
                                             const tope = currentDoc.horasTope || 0;
@@ -435,12 +456,10 @@ function App() {
                                                 id={id} asignacion={asignacion} 
                                                 onRemove={(cid) => updateActiveHorario(p => {const n={...p}; delete n[cid]; return n;})} 
                                                 onDocenteChange={(cid, docId) => { 
-                                                    // 🟢 CORRECCIÓN PRINCIPAL: Comparación de IDs robusta (String vs Number)
                                                     const doc = safeDocentes.find(d => d.id.toString() === docId.toString()) || null;
                                                     
                                                     if (doc) {
                                                         const ocupados = ocupacionGlobal.docentes[cid] || [];
-                                                        // 🟢 También aseguramos la comparación aquí para el conflicto de horario
                                                         if (ocupados.some(e => e.split(':')[1] === doc.id.toString() && e.split(':')[0]?.toString() !== activeTabId?.toString())) {
                                                             alert(`⛔ CHOQUE: ${doc.nombre} ya tiene clase aquí.`);
                                                             return; 
