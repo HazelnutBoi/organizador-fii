@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { loadDocentes, loadPlanEstudios } from './utils/csvParser';
-import { LayoutGrid, Search, Calendar, Settings, BookOpen, Plus, X, MapPin, User, Trash2, Building2, Briefcase, FileSpreadsheet, FileText, AlertTriangle, Monitor, Upload, GraduationCap } from 'lucide-react';
+import { LayoutGrid, Search, Calendar, Settings, BookOpen, Plus, X, MapPin, User, Trash2, Building2, Briefcase, FileSpreadsheet, FileText, AlertTriangle, Monitor, Upload, GraduationCap, ClipboardList } from 'lucide-react';
 
 import { usePersistentState } from './hooks/usePersistentState';
 import { DraggableMateria } from './components/DraggableMateria';
@@ -11,7 +11,7 @@ import DocentesManager from './components/DocentesManager';
 import MateriasManager from './components/MateriasManager';
 import CarrerasManager from './components/CarrerasManager';
 import TeacherMonitor from './components/TeacherMonitor';
-import { downloadGroupSchedule } from './utils/exporters';
+import { downloadGroupSchedule, downloadFIIReport } from './utils/exporters';
 import { getMateriaColor } from './utils/colors';
 
 const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -134,7 +134,9 @@ function App() {
         Object.entries(tab?.horario || {}).forEach(([cellId, asignacion]) => {
             if (asignacion?.docente?.id) {
                 if (!docentesMap[cellId]) docentesMap[cellId] = [];
-                docentesMap[cellId].push(tab.id + ':' + asignacion.docente.id);
+                // 🟢 AHORA GUARDAMOS TAB_ID PARA PODER BUSCAR EL NOMBRE DESPUÉS
+                const codigoMat = cleanCode(asignacion.materia?.codigo);
+                docentesMap[cellId].push(`${tab.id}:${asignacion.docente.id}:${codigoMat}`);
             }
         });
     });
@@ -177,12 +179,15 @@ function App() {
 
       if (asignacion.docente?.id) {
           const ocupados = ocupacionGlobal.docentes[cellId] || [];
-          const choque = ocupados.some(e => e.split(':')[1] === asignacion.docente.id.toString() && e.split(':')[0]?.toString() !== activeTabId?.toString());
-          if (choque) {
-              const culpableId = ocupados.find(e => e.split(':')[1] === asignacion.docente.id.toString()).split(':')[0];
-              const culpableTab = (Array.isArray(tabs) ? tabs : []).find(t => t?.id?.toString() === culpableId?.toString());
+          // Buscar choque
+          const choqueStr = ocupados.find(e => e.split(':')[1] === asignacion.docente.id.toString() && e.split(':')[0]?.toString() !== activeTabId?.toString());
+          
+          if (choqueStr) {
+              const tabIdConflictivo = choqueStr.split(':')[0];
+              const culpableTab = (Array.isArray(tabs) ? tabs : []).find(t => t?.id?.toString() === tabIdConflictivo.toString());
               errores.docente = true; 
-              errores.mensajeDocente = `Clase en: ${culpableTab?.nombre || 'Otro grupo'}`;
+              // 🟢 MENSAJE CON NOMBRE EXACTO DEL GRUPO
+              errores.mensajeDocente = `Ocupado en: ${culpableTab?.nombre || 'Otro grupo'}`;
           }
       }
       return Object.keys(errores).length > 0 ? errores : null;
@@ -356,6 +361,15 @@ function App() {
                     </div>
                 </div>
 
+                <div className="px-3 pb-2 pt-1 border-b bg-gray-50 flex justify-center">
+                    <button 
+                        onClick={() => downloadFIIReport(tabs, planEstudios)} 
+                        className="w-full bg-blue-100 text-blue-800 text-xs font-bold py-1.5 rounded border border-blue-200 hover:bg-blue-200 flex items-center justify-center gap-2 transition-colors"
+                    >
+                        <ClipboardList size={14}/> Reporte General FII
+                    </button>
+                </div>
+
                 <div className="p-2 border-b bg-gray-50 relative"><Search className="absolute left-3 top-2.5 text-gray-400" size={16}/><input type="text" placeholder="Buscar materia (Nombre o Código)..." className="w-full pl-9 py-2 text-sm border rounded focus:ring-1 focus:ring-[#F2BD1D] outline-none" value={filtroMateria} onChange={e=>setFiltroMateria(e.target.value)}/></div>
                 <div className="flex-1 overflow-y-auto p-2 bg-gray-50 space-y-2">
                     {materiasDisponibles.length === 0 ? (
@@ -427,11 +441,9 @@ function App() {
                                     const cod = asignacion ? cleanCode(asignacion.materia.codigo) : "";
                                     const nom = asignacion ? cleanText(asignacion.materia.nombre) : "";
 
-                                    // 🟢 LÓGICA UNIFICADA Y MEJORADA DE DOCENTES
                                     const recomendados = safeDocentes.filter(d => d.materias?.some(m => {
                                         const mc = cleanCode(m.codigo);
                                         const mn = cleanText(m.nombre);
-                                        // Buscar por Código (Exacto) O Nombre (Parcial)
                                         return (mc && mc === cod) || (mn && nom && (mn.includes(nom) || nom.includes(mn)));
                                     }));
                                     
@@ -459,12 +471,52 @@ function App() {
                                                     const doc = safeDocentes.find(d => d.id.toString() === docId.toString()) || null;
                                                     
                                                     if (doc) {
-                                                        const ocupados = ocupacionGlobal.docentes[cid] || [];
-                                                        if (ocupados.some(e => e.split(':')[1] === doc.id.toString() && e.split(':')[0]?.toString() !== activeTabId?.toString())) {
-                                                            alert(`⛔ CHOQUE: ${doc.nombre} ya tiene clase aquí.`);
-                                                            return; 
+                                                        // 1. Detección de todas las celdas afectadas
+                                                        const currentMateriaCode = cleanCode(activeHorario[cid]?.materia?.codigo);
+                                                        const celdasAfectadas = Object.entries(activeHorario)
+                                                            .filter(([_, asign]) => cleanCode(asign.materia?.codigo) === currentMateriaCode)
+                                                            .map(([key]) => key);
+
+                                                        let fusionDetectada = false;
+
+                                                        // 2. Verificar conflictos en TODAS las celdas afectadas
+                                                        for (const cellKey of celdasAfectadas) {
+                                                            const ocupados = ocupacionGlobal.docentes[cellKey] || [];
+                                                            const conflicto = ocupados.find(e => {
+                                                                const parts = e.split(':');
+                                                                return parts[1] === doc.id.toString() && parts[0] !== activeTabId?.toString();
+                                                            });
+
+                                                            if (conflicto) {
+                                                                const parts = conflicto.split(':');
+                                                                const tabIdConflictivo = parts[0];
+                                                                const materiaConflictiva = parts[2];
+                                                                
+                                                                // 🟢 BUSCAR NOMBRE DEL GRUPO (TAB)
+                                                                const grupoConflictivo = tabs.find(t => t.id.toString() === tabIdConflictivo.toString())?.nombre || "Otro grupo";
+
+                                                                const [dia, bloqueId] = cellKey.split('-');
+                                                                const bloqueInfo = bloquesHorarios.find(b => b.id === bloqueId);
+                                                                const horarioTexto = `${dia} ${bloqueInfo?.inicio}`;
+
+                                                                if (materiaConflictiva !== currentMateriaCode) {
+                                                                    alert(`⛔ CHOQUE IMPOSIBLE\n\nNo se puede asignar a ${doc.nombre}.\n\nEl ${horarioTexto} ya está en el grupo "${grupoConflictivo}" impartiendo OTRA materia (${materiaConflictiva}).`);
+                                                                    return;
+                                                                }
+                                                                // Guardamos info para preguntar después (solo si es la misma materia)
+                                                                fusionDetectada = { grupo: grupoConflictivo, dia: horarioTexto };
+                                                            }
+                                                        }
+
+                                                        // 3. Confirmar Fusión (Si es la misma materia)
+                                                        if (fusionDetectada) {
+                                                            if (!window.confirm(`⚠️ FUSIÓN DETECTADA\n\nEl docente ${doc.nombre} ya imparte esta materia en el grupo "${fusionDetectada.grupo}" (${fusionDetectada.dia}).\n\n¿Deseas fusionar ambos grupos?`)) {
+                                                                return;
+                                                            }
                                                         }
                                                     }
+                                                    
+                                                    // 4. Actualizar
                                                     const cell = activeHorario[cid];
                                                     updateActiveHorario(prev => {
                                                         const newH = {...prev};
