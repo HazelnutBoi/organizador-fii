@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { X, Save, Plus, Search, Trash2, BookOpen, Copy } from 'lucide-react';
+import { X, Save, Plus, Search, Trash2, BookOpen, Copy, Building2, CheckCircle2 } from 'lucide-react';
 
-// AÑADIMOS LA PROP 'carreras'
 const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios, carreras = [] }) => {
   const [filtro, setFiltro] = useState('');
+  // 🟢 Agregamos 'esFII' al estado inicial (por defecto true)
   const [editingMateria, setEditingMateria] = useState(null);
 
   const materiasFiltradas = useMemo(() => {
@@ -60,13 +60,15 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios, carr
   };
 
   const startEditing = (m) => {
-      setEditingMateria({ ...m, originalCarrera: m.carrera, isClone: false });
+      // Aseguramos que esFII tenga un valor (true si es undefined para compatibilidad)
+      setEditingMateria({ ...m, esFII: m.esFII !== undefined ? m.esFII : true, originalCarrera: m.carrera, isClone: false });
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white w-full max-w-6xl h-[85vh] rounded-xl shadow-2xl flex overflow-hidden animate-in fade-in zoom-in duration-200">
         
+        {/* IZQUIERDA: LISTA */}
         <div className="w-1/3 border-r bg-gray-50 flex flex-col">
             <div className="p-4 border-b bg-white">
                 <div className="flex justify-between items-center mb-2">
@@ -78,7 +80,7 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios, carr
                     <input className="w-full pl-8 p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Buscar materia..." value={filtro} onChange={e=>setFiltro(e.target.value)}/>
                 </div>
                 <button 
-                    onClick={() => setEditingMateria({ codigo: '', nombre: '', carrera: '', anio: '', semestre: '', horasT: 0, horasL: 0, isClone: true })}
+                    onClick={() => setEditingMateria({ codigo: '', nombre: '', carrera: '', anio: '', semestre: '', horasT: 0, horasL: 0, isClone: true, esFII: true })}
                     className="w-full mt-3 bg-blue-600 text-white p-2 rounded font-bold flex justify-center gap-2 hover:bg-blue-700 transition-colors"
                 >
                     <Plus size={18}/> Nueva Materia
@@ -93,11 +95,16 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios, carr
                             <span className="text-[10px] bg-gray-100 text-gray-600 px-1 rounded border font-mono">{m.codigo}</span>
                             <span className="text-[10px] text-blue-600 font-bold truncate max-w-[150px]" title={m.carrera}>{m.carrera}</span>
                         </div>
+                        {/* Indicador visual en la lista si es FII */}
+                        <div className="mt-1 flex justify-end">
+                            {m.esFII !== false && <span className="text-[9px] bg-green-50 text-green-700 border border-green-200 px-1 rounded">FII</span>}
+                        </div>
                     </div>
                 ))}
             </div>
         </div>
 
+        {/* DERECHA: EDICION */}
         <div className="flex-1 flex flex-col bg-white">
             <div className="p-4 bg-gray-100 border-b flex justify-between items-center shadow-sm">
                 <h3 className="font-bold text-xl text-gray-800">
@@ -108,6 +115,24 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios, carr
 
             {editingMateria ? (
                 <div className="p-6 flex-1 overflow-y-auto space-y-4">
+                    
+                    {/* 🟢 NUEVO SELECTOR: ES FACULTAD INDUSTRIAL */}
+                    <div className={`p-4 rounded-lg border flex items-center justify-between cursor-pointer transition-colors ${editingMateria.esFII ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-200'}`}
+                         onClick={() => setEditingMateria(prev => ({ ...prev, esFII: !prev.esFII }))}>
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${editingMateria.esFII ? 'bg-green-200 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                                <Building2 size={20}/>
+                            </div>
+                            <div>
+                                <span className="font-bold text-sm block">¿Impartida por Facultad Industrial?</span>
+                                <span className="text-xs text-gray-500">{editingMateria.esFII ? 'SÍ - Esta materia aparecerá en el reporte de la Facultad.' : 'NO - Es una materia de servicio/otra facultad.'}</span>
+                            </div>
+                        </div>
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${editingMateria.esFII ? 'border-green-500 bg-green-500 text-white' : 'border-gray-300'}`}>
+                            {editingMateria.esFII && <CheckCircle2 size={16}/>}
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Código</label>
@@ -119,7 +144,6 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios, carr
                         </div>
                     </div>
                     
-                    {/* SELECTOR DE CARRERA ESTANDARIZADO */}
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Carrera (Facultad/Programa)</label>
                         {carreras.length > 0 ? (
@@ -135,12 +159,8 @@ const MateriasManager = ({ isOpen, onClose, materias = [], setPlanEstudios, carr
                             </select>
                         ) : (
                             <div className="text-red-500 text-xs p-2 bg-red-50 rounded border border-red-100">
-                                ⚠️ No hay carreras registradas en el sistema.
+                                ⚠️ No hay carreras registradas.
                             </div>
-                        )}
-                        
-                        {!editingMateria.isClone && (
-                            <p className="text-[10px] text-gray-400 mt-1">Usa "Clonar" para llevar esta materia a otra carrera.</p>
                         )}
                     </div>
 
