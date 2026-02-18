@@ -1,55 +1,73 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { GripVertical, BookOpen } from 'lucide-react';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, CheckCircle2 } from 'lucide-react';
 
-export const DraggableMateria = ({ materia, horasAsignadas }) => {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: materia.codigo, // Usamos el código de la materia como ID
-    data: { materia }   // Pasamos el objeto materia completo
-  });
+export function DraggableMateria({ materia, horasAsignadas }) {
+    // 1. Calcular si ya se completaron las horas
+    const horasTotales = (materia.horasT || 0) + (materia.horasL || 0);
+    const completo = horasAsignadas >= horasTotales && horasTotales > 0;
 
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: `sidebar-${materia.codigo}`,
+        data: { 
+            origin: 'sidebar',
+            materia: materia 
+        },
+        disabled: completo // 🟢 BLOQUEO: No permite arrastrar si está completa
+    });
 
-  // Calculamos si ya se cubrieron las horas requeridas
-  const horasTotales = materia.horasT + materia.horasL;
-  const completada = horasAsignadas >= horasTotales;
+    const style = {
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.5 : 1,
+    };
 
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={`border rounded p-3 mb-2 shadow-sm flex justify-between items-start group relative touch-none cursor-grab active:cursor-grabbing
-        ${completada ? 'bg-green-50 border-green-200 opacity-60' : 'bg-white border-gray-200 hover:shadow-md'}
-      `}
-    >
-      <div className="flex-1">
-        <div className="flex justify-between items-start">
-            <p className="font-bold text-sm text-gray-800 leading-tight w-10/12">{materia.nombre}</p>
-            <GripVertical className="text-gray-300" size={16} />
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...listeners}
+            {...attributes}
+            className={`
+                relative p-3 rounded-lg border flex gap-3 items-center group transition-all select-none
+                ${completo 
+                    ? 'bg-green-50 border-green-300 cursor-not-allowed opacity-90' // Estilo VERDE y BLOQUEADO
+                    : 'bg-white border-gray-200 hover:shadow-md hover:border-blue-300 cursor-grab active:cursor-grabbing' // Estilo NORMAL
+                }
+            `}
+        >
+            {/* Icono: Grip si se puede mover, Check si terminó */}
+            <div className={completo ? "text-green-600" : "text-gray-300 group-hover:text-blue-400"}>
+                {completo ? <CheckCircle2 size={18} /> : <GripVertical size={16} />}
+            </div>
+
+            <div className="flex-1 min-w-0">
+                {/* Encabezado: Código e Indicador */}
+                <div className="flex justify-between items-center mb-1">
+                    <span className={`font-mono text-sm font-black tracking-tight ${completo ? 'text-green-800' : 'text-gray-800'}`}>
+                        {materia.codigo}
+                    </span>
+                    
+                    {/* Indicador de Horas */}
+                    <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${completo ? 'bg-green-200 text-green-800 border-green-300' : 'bg-gray-100 text-gray-500'}`}>
+                        {horasAsignadas} / {horasTotales}h
+                    </div>
+                </div>
+
+                {/* Nombre de la materia */}
+                <div className={`font-medium text-xs leading-tight line-clamp-2 ${completo ? 'text-green-700' : 'text-gray-600'}`} title={materia.nombre}>
+                    {materia.nombre}
+                </div>
+                
+                {/* Detalles extra (ocultos si está completo para limpiar ruido visual) */}
+                {!completo && (
+                    <div className="text-[9px] text-gray-400 mt-1 truncate flex gap-2">
+                        <span>S{materia.semestre}</span>
+                        <span>•</span>
+                        <span className="truncate max-w-[120px]">{materia.carrera}</span>
+                    </div>
+                )}
+            </div>
         </div>
-        <p className="text-[10px] text-gray-500 font-mono mt-0.5">{materia.codigo}</p>
-        
-        <div className="mt-2 flex gap-2 items-center">
-             {/* Indicadores de Horas */}
-             <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 font-bold" title="Teoría">
-                T: {materia.horasT}
-             </span>
-             {materia.horasL > 0 && (
-                 <span className="text-[10px] bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded border border-yellow-100 font-bold" title="Laboratorio">
-                    L: {materia.horasL}
-                 </span>
-             )}
-             
-             {/* Estado de asignación */}
-             <span className={`text-[10px] ml-auto font-bold ${completada ? 'text-green-600' : 'text-gray-400'}`}>
-                {horasAsignadas} / {horasTotales} hrs
-             </span>
-        </div>
-      </div>
-    </div>
-  );
-};
+    );
+}
