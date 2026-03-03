@@ -60,13 +60,25 @@ function App() {
           .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [tabs, activePeriod]);
 
+  // 🟢 CORRECCIÓN APLICADA AQUÍ: Evitamos la condición de carrera
   useEffect(() => {
-      if (!loadingTabs && currentPeriodTabs.length > 0 && (!activeTabId || !currentPeriodTabs.find(t => t.id.toString() === activeTabId?.toString()))) {
-          setActiveTabId(currentPeriodTabs[0].id);
-      } else if (currentPeriodTabs.length === 0) {
-          setActiveTabId(null);
+      if (loadingTabs) return; // Si los datos aún están cargando, esperamos.
+
+      if (currentPeriodTabs.length > 0) {
+          // Buscamos si el grupo que estaba guardado en caché existe en este semestre
+          const grupoExiste = currentPeriodTabs.find(t => t.id.toString() === activeTabId?.toString());
+          
+          // Si no hay grupo guardado, o si el grupo guardado pertenecía a otro semestre, seleccionamos el primero
+          if (!activeTabId || !grupoExiste) {
+              setActiveTabId(currentPeriodTabs[0].id);
+          }
+      } else {
+          // Si realmente no hay grupos creados, limpiamos la selección
+          if (activeTabId !== null) {
+              setActiveTabId(null);
+          }
       }
-  }, [currentPeriodTabs, activeTabId, loadingTabs]);
+  }, [currentPeriodTabs, activeTabId, loadingTabs, setActiveTabId]);
 
   const activeTab = useMemo(() => {
       if (!currentPeriodTabs || !activeTabId) return null;
