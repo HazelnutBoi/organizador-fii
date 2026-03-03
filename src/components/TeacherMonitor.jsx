@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-// 🟢 CORRECCIÓN AQUÍ: Agregué 'User' que faltaba en los imports
 import { X, Search, FileDown, AlertTriangle, Clock, User } from 'lucide-react'; 
 import { downloadTeacherSchedule } from '../utils/exporters';
 
@@ -21,8 +20,12 @@ const TeacherMonitor = ({ docentes = [], tabs = [], statsDocentes = {}, onClose 
     const [selectedDocenteId, setSelectedDocenteId] = useState('');
     const [filtro, setFiltro] = useState('');
 
+    // 🟢 ORDEN ALFABÉTICO
     const filteredDocentes = useMemo(() => {
-        return docentes.filter(d => d.nombre.toLowerCase().includes(filtro.toLowerCase())).slice(0, 50);
+        return docentes
+            .filter(d => d.nombre.toLowerCase().includes(filtro.toLowerCase()))
+            .sort((a, b) => a.nombre.localeCompare(b.nombre)) // <-- Orden A-Z
+            .slice(0, 50);
     }, [docentes, filtro]);
 
     const selectedDocente = docentes.find(d => d.id.toString() === selectedDocenteId);
@@ -36,7 +39,6 @@ const TeacherMonitor = ({ docentes = [], tabs = [], statsDocentes = {}, onClose 
                 </div>
 
                 <div className="flex flex-1 overflow-hidden">
-                    {/* LISTA LATERAL */}
                     <div className="w-80 border-r bg-gray-50 flex flex-col p-4">
                         <div className="relative mb-4">
                             <Search className="absolute left-3 top-2.5 text-gray-400" size={16}/>
@@ -60,28 +62,20 @@ const TeacherMonitor = ({ docentes = [], tabs = [], statsDocentes = {}, onClose 
                                         key={d.id} 
                                         onClick={() => setSelectedDocenteId(d.id.toString())}
                                         className={`p-3 rounded-lg cursor-pointer border transition-all ${
-                                            isSelected 
-                                            ? 'bg-blue-50 border-blue-500 shadow-md ring-1 ring-blue-500' 
-                                            : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                                            isSelected ? 'bg-blue-50 border-blue-500 shadow-md ring-1 ring-blue-500' : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                                         }`}
                                     >
                                         <div className="flex justify-between items-start mb-1">
                                             <span className={`text-sm font-bold truncate ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>{d.nombre}</span>
                                             {isOverLimit && <AlertTriangle size={14} className="text-red-500 shrink-0" />}
                                         </div>
-                                        
                                         <div className="mt-1">
                                             <div className="flex justify-between text-[10px] text-gray-500 mb-1 font-mono">
                                                 <span>{horasAsignadas} hrs</span>
                                                 <span>/ {horasTope > 0 ? horasTope : '∞'}</span>
                                             </div>
                                             <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                                <div 
-                                                    className={`h-full rounded-full transition-all duration-500 ${
-                                                        isOverLimit ? 'bg-red-500' : (progress >= 100 ? 'bg-green-500' : 'bg-blue-500')
-                                                    }`} 
-                                                    style={{ width: `${horasTope > 0 ? progress : (horasAsignadas > 0 ? 10 : 0)}%` }}
-                                                ></div>
+                                                <div className={`h-full rounded-full transition-all duration-500 ${isOverLimit ? 'bg-red-500' : (progress >= 100 ? 'bg-green-500' : 'bg-blue-500')}`} style={{ width: `${horasTope > 0 ? progress : (horasAsignadas > 0 ? 10 : 0)}%` }}></div>
                                             </div>
                                         </div>
                                     </div>
@@ -90,7 +84,6 @@ const TeacherMonitor = ({ docentes = [], tabs = [], statsDocentes = {}, onClose 
                         </div>
                     </div>
 
-                    {/* VISTA HORARIO */}
                     <div className="flex-1 p-6 overflow-auto bg-gray-100">
                         {selectedDocente ? (
                             <div className="bg-white rounded-lg shadow border border-gray-200 p-4 min-w-[800px]">
@@ -149,11 +142,8 @@ const TeacherMonitor = ({ docentes = [], tabs = [], statsDocentes = {}, onClose 
                                             return (
                                                 <div key={d} className={`border-r border-gray-100 p-1 text-[10px] flex flex-col justify-center items-center text-center relative group hover:z-20 ${esFusion ? 'bg-purple-100 text-purple-900' : 'bg-blue-50 text-blue-900'}`}>
                                                     <span className="font-bold leading-tight mb-1 line-clamp-2">{materia}</span>
-                                                    
                                                     {esFusion && <span className="bg-purple-600 text-white px-1.5 py-0.5 rounded-[4px] text-[8px] font-bold mb-1 shadow-sm">FUSIÓN</span>}
-                                                    
                                                     <div className="font-mono text-gray-600 font-bold bg-white/50 px-1 rounded truncate w-full">{listaGrupos}</div>
-                                                    
                                                     {listaSalones && <span className="text-[9px] text-gray-500 mt-0.5 font-bold">Aula: {listaSalones}</span>}
                                                 </div>
                                             );
@@ -173,5 +163,4 @@ const TeacherMonitor = ({ docentes = [], tabs = [], statsDocentes = {}, onClose 
         </div>
     );
 };
-
 export default TeacherMonitor;
