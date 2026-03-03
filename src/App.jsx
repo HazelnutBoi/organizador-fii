@@ -36,10 +36,10 @@ function App() {
   const [planEstudios, setPlanEstudios, loadingPlan] = usePersistentState('fii_materias', []);
   const [tabs, setTabs, loadingTabs] = usePersistentState('fii_tabs', []);
   const [carreras, setCarreras, loadingCarreras] = usePersistentState('fii_carreras', []);
-  const [activePeriod, setActivePeriod] = usePersistentState('fii_active_period', '1er Semestre');
   
-  // 🟢 AHORA SE GUARDA EN CACHÉ QUÉ GRUPO ESTABA SELECCIONADO
-  const [activeTabId, setActiveTabId] = usePersistentState('fii_active_tab', null);
+  // 🟢 CORRECCIÓN: Extraemos el estado de carga para el periodo y el tab activo
+  const [activePeriod, setActivePeriod, loadingPeriod] = usePersistentState('fii_active_period', '1er Semestre');
+  const [activeTabId, setActiveTabId, loadingActiveTab] = usePersistentState('fii_active_tab', null);
   
   const [isModalOpen, setModalOpen] = useState(false);
   const [showDocentesMgr, setShowDocentesMgr] = useState(false);
@@ -60,25 +60,22 @@ function App() {
           .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [tabs, activePeriod]);
 
-  // 🟢 CORRECCIÓN APLICADA AQUÍ: Evitamos la condición de carrera
+  // 🟢 CORRECCIÓN: Esperar a que carguen las variables antes de pisar el activeTabId
   useEffect(() => {
-      if (loadingTabs) return; // Si los datos aún están cargando, esperamos.
+      if (loadingTabs || loadingPeriod || loadingActiveTab) return; 
 
       if (currentPeriodTabs.length > 0) {
-          // Buscamos si el grupo que estaba guardado en caché existe en este semestre
           const grupoExiste = currentPeriodTabs.find(t => t.id.toString() === activeTabId?.toString());
           
-          // Si no hay grupo guardado, o si el grupo guardado pertenecía a otro semestre, seleccionamos el primero
           if (!activeTabId || !grupoExiste) {
               setActiveTabId(currentPeriodTabs[0].id);
           }
       } else {
-          // Si realmente no hay grupos creados, limpiamos la selección
           if (activeTabId !== null) {
               setActiveTabId(null);
           }
       }
-  }, [currentPeriodTabs, activeTabId, loadingTabs, setActiveTabId]);
+  }, [currentPeriodTabs, activeTabId, loadingTabs, loadingPeriod, loadingActiveTab, setActiveTabId]);
 
   const activeTab = useMemo(() => {
       if (!currentPeriodTabs || !activeTabId) return null;
@@ -301,7 +298,7 @@ function App() {
       }
   };
 
-  if (loadingDocentes || loadingPlan || loadingTabs || loadingCarreras) {
+  if (loadingDocentes || loadingPlan || loadingTabs || loadingCarreras || loadingPeriod || loadingActiveTab) {
       return (
         <div className="flex flex-col h-screen items-center justify-center bg-gray-50 gap-4">
             <div className="w-12 h-12 border-4 border-[#F2BD1D] border-t-transparent rounded-full animate-spin"></div>
