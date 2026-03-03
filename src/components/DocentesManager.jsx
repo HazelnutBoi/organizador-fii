@@ -15,34 +15,30 @@ const DocentesManager = ({
     const [editingDocente, setEditingDocente] = useState(null);
     const [materiaSearch, setMateriaSearch] = useState('');
 
-    // Filtro de Docentes (Lista Izquierda)
+    // 🟢 ORDEN ALFABÉTICO
     const docentesFiltrados = useMemo(() => {
         const term = (filtro || "").toLowerCase();
-        return (docentes || []).filter(d => 
-            (d?.nombre || "").toLowerCase().includes(term)
-        ).slice(0, 50);
+        return (docentes || [])
+            .filter(d => (d?.nombre || "").toLowerCase().includes(term))
+            .sort((a, b) => a.nombre.localeCompare(b.nombre)) // <-- Orden A-Z
+            .slice(0, 50);
     }, [docentes, filtro]);
 
-    // 🟢 CORRECCIÓN AQUÍ: Búsqueda por Código + Eliminación de Duplicados
     const materiasParaAsignar = useMemo(() => {
         const term = (materiaSearch || "").toLowerCase().trim();
-        const unicas = new Map(); // Usamos un Map para filtrar duplicados por código
+        const unicas = new Map(); 
 
         (materias || []).forEach(m => {
             const nombre = (m?.nombre || "").toLowerCase();
             const codigoStr = (m?.codigo || "").toString().toLowerCase();
-            const codigoReal = (m?.codigo || "").toString(); // Llave única
+            const codigoReal = (m?.codigo || "").toString(); 
 
-            // Si coincide con Nombre O Código
             if (nombre.includes(term) || codigoStr.includes(term)) {
-                // Solo lo agregamos si no existe ya en el mapa
                 if (!unicas.has(codigoReal)) {
                     unicas.set(codigoReal, m);
                 }
             }
         });
-
-        // Convertimos los valores del mapa a array y limitamos a 50
         return Array.from(unicas.values()).slice(0, 50);
     }, [materias, materiaSearch]);
 
@@ -52,7 +48,6 @@ const DocentesManager = ({
         if (!editingDocente?.nombre || !editingDocente.nombre.trim()) {
             return alert("El nombre es obligatorio");
         }
-        
         setDocentes(prev => {
             const safePrev = prev || [];
             const existe = safePrev.some(d => d.id === editingDocente.id);
@@ -85,8 +80,6 @@ const DocentesManager = ({
     return (
         <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white w-full max-w-5xl h-[85vh] rounded-xl shadow-2xl flex overflow-hidden animate-in fade-in zoom-in duration-200">
-                
-                {/* LADO IZQUIERDO: LISTA */}
                 <div className="w-1/3 border-r bg-gray-50 flex flex-col">
                     <div className="p-4 border-b bg-white">
                         <div className="flex justify-between items-center mb-2">
@@ -134,27 +127,23 @@ const DocentesManager = ({
                     </div>
                 </div>
 
-                {/* LADO DERECHO: EDICION */}
                 <div className="flex-1 flex flex-col bg-white">
                     <div className="p-4 bg-gray-100 border-b flex justify-between items-center shadow-sm">
                         <h3 className="font-bold text-xl text-gray-800">
                             {editingDocente ? (editingDocente.nombre ? editingDocente.nombre : "Nuevo Docente") : "Detalles"}
                         </h3>
-                        
                         <div className="flex items-center gap-2">
                             {editingDocente && editingDocente.nombre && (
                                 <>
                                     <button 
                                         onClick={() => downloadTeacherSchedule(editingDocente, tabs, 'excel')} 
                                         className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 text-xs font-bold rounded hover:bg-green-200 transition-colors"
-                                        title="Descargar Horario Individual Excel"
                                     >
                                         <FileSpreadsheet size={16}/> Excel
                                     </button>
                                     <button 
                                         onClick={() => downloadTeacherSchedule(editingDocente, tabs, 'pdf')} 
                                         className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 text-xs font-bold rounded hover:bg-red-200 transition-colors"
-                                        title="Descargar Horario Individual PDF"
                                     >
                                         <FileText size={16}/> PDF
                                     </button>
@@ -177,25 +166,21 @@ const DocentesManager = ({
                                     <input className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none" value={editingDocente.clasificacion || ''} onChange={e => setEditingDocente({...editingDocente, clasificacion: e.target.value})}/>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-blue-800 uppercase mb-1 flex items-center gap-1"><Clock size={14}/> Tope de Horas (Contrato)</label>
+                                    <label className="block text-xs font-bold text-blue-800 uppercase mb-1 flex items-center gap-1"><Clock size={14}/> Tope de Horas</label>
                                     <input type="number" className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-bold" value={editingDocente.horasTope || 0} onChange={e => setEditingDocente({...editingDocente, horasTope: parseInt(e.target.value) || 0})}/>
-                                    <span className="text-[10px] text-gray-400">0 = Sin límite (Ignorar alerta)</span>
                                 </div>
                             </div>
-
                             <div className="border rounded-lg p-4 bg-gray-50">
                                 <h4 className="font-bold mb-2 text-sm text-gray-700">Materias Autorizadas</h4>
                                 <div className="relative mb-2">
                                     <Search className="absolute left-2 top-2.5 text-gray-400" size={14}/>
-                                    <input className="w-full pl-8 p-2 border rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Buscar materia (Nombre o Código)..." value={materiaSearch} onChange={e=>setMateriaSearch(e.target.value)}/>
+                                    <input className="w-full pl-8 p-2 border rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Buscar materia..." value={materiaSearch} onChange={e=>setMateriaSearch(e.target.value)}/>
                                 </div>
-                                
                                 <div className="h-64 overflow-y-auto border rounded bg-white p-2 space-y-1 shadow-inner">
                                     {materiasParaAsignar.map(m => {
                                         const selected = editingDocente.materias?.some(em => em.codigo === m.codigo);
                                         return (
-                                            <div key={m.codigo} onClick={() => toggleMateria(m)}
-                                                 className={`flex justify-between items-center p-2 rounded cursor-pointer border transition-colors ${selected ? 'bg-green-50 border-green-500 shadow-sm' : 'bg-white border-transparent hover:bg-gray-100'}`}>
+                                            <div key={m.codigo} onClick={() => toggleMateria(m)} className={`flex justify-between items-center p-2 rounded cursor-pointer border transition-colors ${selected ? 'bg-green-50 border-green-500 shadow-sm' : 'bg-white border-transparent hover:bg-gray-100'}`}>
                                                 <div>
                                                     <span className="text-sm font-medium block">{m.nombre}</span>
                                                     <span className="text-[10px] text-gray-400 font-mono">{m.codigo}</span>
@@ -206,10 +191,9 @@ const DocentesManager = ({
                                     })}
                                 </div>
                             </div>
-
                             <div className="mt-6 flex gap-2 pt-4 border-t">
-                                <button onClick={handleSave} className="flex-1 bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 flex justify-center gap-2 transition-all shadow-md active:scale-95"><Save/> Guardar Cambios</button>
-                                <button onClick={handleDelete} className="bg-white border border-red-200 text-red-600 p-3 rounded-lg hover:bg-red-50 transition-colors"><Trash2/></button>
+                                <button onClick={handleSave} className="flex-1 bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 flex justify-center gap-2"><Save/> Guardar Cambios</button>
+                                <button onClick={handleDelete} className="bg-white border border-red-200 text-red-600 p-3 rounded-lg hover:bg-red-50"><Trash2/></button>
                             </div>
                         </div>
                     ) : (
@@ -223,5 +207,4 @@ const DocentesManager = ({
         </div>
     );
 };
-
 export default DocentesManager;
