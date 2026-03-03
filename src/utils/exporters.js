@@ -78,9 +78,9 @@ export const downloadTeacherSchedule = (docente, tabs, format = 'pdf') => {
         const row = [`${b.inicio} - ${b.fin}`];
         dias.forEach(d => {
             const cellId = `${d}-${b.id}`;
+            let info = "";
             const coincidencias = [];
 
-            // Buscar en todos los grupos
             safeTabs.forEach(tab => {
                 const asignacion = tab?.horario?.[cellId];
                 if (asignacion?.docente?.id === docente.id) {
@@ -92,17 +92,13 @@ export const downloadTeacherSchedule = (docente, tabs, format = 'pdf') => {
                 }
             });
 
-            // 🟢 LÓGICA DE FUSIÓN EN REPORTE
             if (coincidencias.length === 0) {
                 row.push("");
             } else if (coincidencias.length === 1) {
-                // Normal
-                const c = coincidencias[0];
-                row.push(`${c.materia}\nGrupo: ${c.grupo}\nSalón: ${c.salon}`);
+                row.push(`${coincidencias[0].materia}\nGrupo: ${coincidencias[0].grupo}\nSalón: ${coincidencias[0].salon}`);
             } else {
-                // Fusión detectada
                 const gruposStr = coincidencias.map(c => c.grupo).join(" + ");
-                const materia = coincidencias[0].materia; // Asumimos misma materia si es fusión válida
+                const materia = coincidencias[0].materia; 
                 const salones = [...new Set(coincidencias.map(c => c.salon))].join("/");
                 row.push(`[FUSIÓN] ${gruposStr}\n${materia}\nSalón: ${salones}`);
             }
@@ -121,10 +117,9 @@ export const downloadTeacherSchedule = (docente, tabs, format = 'pdf') => {
             theme: 'grid',
             styles: { fontSize: 7, cellPadding: 1 },
             headStyles: { fillColor: [44, 62, 80] },
-            // Resaltar fusiones en el PDF
             didParseCell: function(data) {
                 if (data.section === 'body' && data.cell.raw.toString().includes("[FUSIÓN]")) {
-                    data.cell.styles.fillColor = [240, 240, 255]; // Fondo morado muy claro
+                    data.cell.styles.fillColor = [240, 240, 255]; 
                     data.cell.styles.textColor = [100, 0, 150];
                 }
             }
@@ -138,9 +133,9 @@ export const downloadTeacherSchedule = (docente, tabs, format = 'pdf') => {
     }
 };
 
-// 🟢 ESTA ES LA FUNCIÓN NUEVA
+// 🟢 REPORTE FII (EXCEL EXCLUSIVO, CON FALTANTES ARRIBA)
 export const downloadFIIReport = (tabs, planEstudios) => {
-    if (!tabs || tabs.length === 0) return alert("No hay horarios creados.");
+    if (!tabs || tabs.length === 0) return alert("No hay horarios creados en este periodo.");
 
     const rows = [];
     
@@ -148,9 +143,7 @@ export const downloadFIIReport = (tabs, planEstudios) => {
         Object.entries(tab.horario || {}).forEach(([cellId, asignacion]) => {
             if (!asignacion.materia) return;
 
-            // Verificamos en el plan de estudios original si es FII
             const materiaMaestra = (planEstudios || []).find(m => m.codigo === asignacion.materia.codigo);
-            // Si es undefined, asumimos true (facultad) por defecto. Si es false explícito, es externa.
             const esFII = materiaMaestra ? (materiaMaestra.esFII !== false) : (asignacion.materia.esFII !== false);
 
             if (esFII) {
@@ -167,43 +160,34 @@ export const downloadFIIReport = (tabs, planEstudios) => {
                     hora: horarioStr,
                     docente: tieneDocente ? asignacion.docente.nombre : "⚠️ SIN ASIGNAR",
                     salon: asignacion.salon || "S/A",
+                    estado: tieneDocente ? "OK" : "FALTANTE",
                     diaOrder: dias.indexOf(dia)
                 });
             }
         });
     });
 
-    rows.sort((a, b) => 
-        a.grupo.localeCompare(b.grupo) || 
-        (a.diaOrder - b.diaOrder) || 
-        a.hora.localeCompare(b.hora)
-    );
+    if (rows.length === 0) return alert("No se encontraron materias marcadas como 'Facultad de Industrial' (FII).");
 
-    const headers = [["Grupo", "Código", "Materia", "Día", "Hora", "Docente", "Salón"]];
-    const data = rows.map(r => [r.grupo, r.codigo, r.materia, r.dia, r.hora, r.docente, r.salon]);
-
-    if (rows.length === 0) return alert("No se encontraron materias marcadas como 'Facultad de Industrial' asignadas en los horarios.");
-
-    const doc = new jsPDF('p', 'mm', 'a4');
-    doc.setFontSize(16);
-    doc.text("Reporte de Materias Facultad (FII)", 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Generado: ${new Date().toLocaleDateString()} | Total: ${rows.length}`, 14, 22);
-
-    doc.autoTable({
-        head: headers,
-        body: data,
-        startY: 25,
-        theme: 'striped',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 128, 185] },
-        didParseCell: function(data) {
-            if (data.section === 'body' && data.row.raw[5].includes("SIN ASIGNAR")) {
-                data.cell.styles.textColor = [200, 0, 0];
-                data.cell.styles.fontStyle = 'bold';
-            }
-        }
+    // ORDENAR: Faltantes primero, luego Grupo (A-Z), luego Día, luego Hora
+    rows.sort((a, b) => {
+        if (a.estado === "FALTANTE" && b.estado !== "FALTANTE") return -1;
+        if (a.estado !== "FALTANTE" && b.estado === "FALTANTE") return 1;
+        return a.grupo.localeCompare(b.grupo) || (a.diaOrder - b.diaOrder) || a.hora.localeCompare(b.hora);
     });
 
-    doc.save("Reporte_FII_General.pdf");
+    const headers = ["Estado", "Grupo", "Código", "Materia", "Día", "Hora", "Docente", "Salón"];
+    const data = rows.map(r => [r.estado, r.grupo, r.codigo, r.materia, r.dia, r.hora, r.docente, r.salon]);
+
+    const ws = XLSX.utils.aoa_to_sheet([
+        ["Reporte de Asignaciones - Facultad Industrial (FII)"],
+        [`Generado: ${new Date().toLocaleDateString()}`],
+        [],
+        headers,
+        ...data
+    ]);
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte FII");
+    XLSX.writeFile(wb, "Reporte_FII_General.xlsx");
 };
