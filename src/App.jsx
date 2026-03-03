@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { loadDocentes, loadPlanEstudios } from './utils/csvParser';
-import { LayoutGrid, Search, Calendar, Settings, BookOpen, Plus, X, MapPin, User, Trash2, Building2, Briefcase, FileSpreadsheet, FileText, AlertTriangle, Monitor, Upload, GraduationCap, ClipboardList } from 'lucide-react';
+import { LayoutGrid, Search, Calendar, Settings, BookOpen, Plus, X, MapPin, User, Trash2, Building2, Briefcase, FileSpreadsheet, FileText, AlertTriangle, Monitor, Upload, GraduationCap, ClipboardList, FolderKanban } from 'lucide-react';
 
 import { usePersistentState } from './hooks/usePersistentState';
 import { DraggableMateria } from './components/DraggableMateria';
@@ -36,8 +36,11 @@ function App() {
   const [planEstudios, setPlanEstudios, loadingPlan] = usePersistentState('fii_materias', []);
   const [tabs, setTabs, loadingTabs] = usePersistentState('fii_tabs', []);
   const [carreras, setCarreras, loadingCarreras] = usePersistentState('fii_carreras', []);
+  const [activePeriod, setActivePeriod] = usePersistentState('fii_active_period', '1er Semestre');
   
-  const [activeTabId, setActiveTabId] = useState(null);
+  // 🟢 AHORA SE GUARDA EN CACHÉ QUÉ GRUPO ESTABA SELECCIONADO
+  const [activeTabId, setActiveTabId] = usePersistentState('fii_active_tab', null);
+  
   const [isModalOpen, setModalOpen] = useState(false);
   const [showDocentesMgr, setShowDocentesMgr] = useState(false);
   const [showMateriasMgr, setShowMateriasMgr] = useState(false);
@@ -45,23 +48,30 @@ function App() {
   const [showMonitor, setShowMonitor] = useState(false);
   
   const [tempConfig, setTempConfig] = useState({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular', facultad: '' });
-  const [activeMateria, setActiveMateria] = useState(null); 
   const [filtroMateria, setFiltroMateria] = useState("");
   const [isEditingTab, setIsEditingTab] = useState(false);
   const [dragItem, setDragItem] = useState(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
+  const currentPeriodTabs = useMemo(() => {
+      return (tabs || [])
+          .filter(t => (t.periodo || '1er Semestre') === activePeriod)
+          .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [tabs, activePeriod]);
+
   useEffect(() => {
-      if (!loadingTabs && Array.isArray(tabs) && tabs.length > 0 && !activeTabId) {
-          setActiveTabId(tabs[0].id);
+      if (!loadingTabs && currentPeriodTabs.length > 0 && (!activeTabId || !currentPeriodTabs.find(t => t.id.toString() === activeTabId?.toString()))) {
+          setActiveTabId(currentPeriodTabs[0].id);
+      } else if (currentPeriodTabs.length === 0) {
+          setActiveTabId(null);
       }
-  }, [tabs, activeTabId, loadingTabs]);
+  }, [currentPeriodTabs, activeTabId, loadingTabs]);
 
   const activeTab = useMemo(() => {
-      if (!Array.isArray(tabs) || !activeTabId) return null;
-      return tabs.find(t => t?.id?.toString() === activeTabId?.toString()) || tabs[0] || null;
-  }, [tabs, activeTabId]);
+      if (!currentPeriodTabs || !activeTabId) return null;
+      return currentPeriodTabs.find(t => t?.id?.toString() === activeTabId?.toString()) || currentPeriodTabs[0] || null;
+  }, [currentPeriodTabs, activeTabId]);
 
   const activeHorario = useMemo(() => activeTab?.horario || {}, [activeTab]);
   const currentConfig = useMemo(() => activeTab?.config || { carrera: '', anio: '', semestre: '' }, [activeTab]);
@@ -69,7 +79,7 @@ function App() {
   const opcionesConfig = useMemo(() => {
     const safePlan = Array.isArray(planEstudios) ? planEstudios : [];
     return { 
-        carreras: [], // Se pasa directamente la prop 'carreras' al ConfigPanel
+        carreras: [], 
         anios: [...new Set(safePlan.map(m => m.anio))].sort(),
         semestres: [...new Set(safePlan.map(m => m.semestre).filter(s => s && s !== '0'))].sort()
     };
@@ -87,7 +97,6 @@ function App() {
         const mCarrera = cleanText(m.carrera);
         const coincideCarrera = mCarrera === carreraSel || mCarrera.includes(carreraSel);
 
-        // Lógica de filtrado según tipo de horario
         if (activeTab.tipo === 'service') {
             return coincideCarrera;
         } else {
@@ -122,16 +131,27 @@ function App() {
   }, [planEstudios, activeTab, currentConfig, filtroMateria]);
 
   const statsDocentes = useMemo(() => {
+      const uniqueSlots = new Set();
+      currentPeriodTabs.forEach(t => {
+          Object.entries(t?.horario || {}).forEach(([cellId, asignacion]) => {
+              if (asignacion?.docente?.id) {
+                  const key = `${asignacion.docente.id}-${cellId}`;
+                  uniqueSlots.add(key);
+              }
+          });
+      });
+
       const stats = {};
-      (Array.isArray(tabs) ? tabs : []).forEach(t => {
-          Object.values(t?.horario || {}).forEach(h => { if (h?.docente?.id) stats[h.docente.id] = (stats[h.docente.id] || 0) + 1; });
+      uniqueSlots.forEach(key => {
+          const docId = key.split('-')[0];
+          stats[docId] = (stats[docId] || 0) + 1;
       });
       return stats;
-  }, [tabs]);
+  }, [currentPeriodTabs]);
 
   const ocupacionGlobal = useMemo(() => {
     const docentesMap = {};
-    (Array.isArray(tabs) ? tabs : []).forEach(tab => {
+    currentPeriodTabs.forEach(tab => {
         Object.entries(tab?.horario || {}).forEach(([cellId, asignacion]) => {
             if (asignacion?.docente?.id) {
                 if (!docentesMap[cellId]) docentesMap[cellId] = [];
@@ -141,7 +161,7 @@ function App() {
         });
     });
     return { docentes: docentesMap };
-  }, [tabs]);
+  }, [currentPeriodTabs]);
 
   const conteoHorasMateria = useMemo(() => {
     const counts = {}; 
@@ -165,13 +185,12 @@ function App() {
 
       if (asignacion.salon) {
           const salonInput = cleanText(asignacion.salon);
-          const safeTabs = Array.isArray(tabs) ? tabs : [];
-          const choque = safeTabs.some(t => 
+          const choque = currentPeriodTabs.some(t => 
               t?.id?.toString() !== activeTabId?.toString() && 
               cleanText(t?.horario?.[cellId]?.salon) === salonInput
           );
           if (choque) {
-              const culpable = safeTabs.find(t => t?.id?.toString() !== activeTabId?.toString() && cleanText(t?.horario?.[cellId]?.salon) === salonInput);
+              const culpable = currentPeriodTabs.find(t => t?.id?.toString() !== activeTabId?.toString() && cleanText(t?.horario?.[cellId]?.salon) === salonInput);
               errores.salon = true; 
               errores.grupoConflictivo = culpable?.nombre || "Otro grupo";
           }
@@ -183,7 +202,7 @@ function App() {
           
           if (choqueStr) {
               const tabIdConflictivo = choqueStr.split(':')[0];
-              const culpableTab = (Array.isArray(tabs) ? tabs : []).find(t => t?.id?.toString() === tabIdConflictivo.toString());
+              const culpableTab = currentPeriodTabs.find(t => t?.id?.toString() === tabIdConflictivo.toString());
               errores.docente = true; 
               errores.mensajeDocente = `Ocupado en: ${culpableTab?.nombre || 'Otro grupo'}`;
           }
@@ -193,7 +212,7 @@ function App() {
 
   const updateActiveHorario = (callback) => {
     if (!activeTabId) return;
-    setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, horario: callback(t.horario || {}) } : t));
+    setTabs(prev => prev.map(t => t.id.toString() === activeTabId.toString() ? { ...t, horario: callback(t.horario || {}) } : t));
   };
 
   const handleDragStart = (e) => {
@@ -255,7 +274,6 @@ function App() {
       setDocentes(docs);
 
       const uniqueCarreras = [...new Set(mats.map(m => m.carrera).filter(Boolean))].sort();
-      // Al importar por primera vez, asumimos que son FII
       const carrerasObjs = uniqueCarreras.map((c, i) => ({ id: Date.now() + i, nombre: c, tipo: 'FII' }));
       setCarreras(carrerasObjs);
 
@@ -263,7 +281,7 @@ function App() {
   };
 
   const handleResetData = () => {
-      if(window.confirm("¿Limpiar todo?")) {
+      if(window.confirm("¿Limpiar TODO el sistema (Todos los semestres)?")) {
         setTabs([]);
         setDocentes([]);
         setPlanEstudios([]);
@@ -275,14 +293,13 @@ function App() {
       return (
         <div className="flex flex-col h-screen items-center justify-center bg-gray-50 gap-4">
             <div className="w-12 h-12 border-4 border-[#F2BD1D] border-t-transparent rounded-full animate-spin"></div>
-            <p className="font-bold text-gray-600">Conectando con la nube...</p>
+            <p className="font-bold text-gray-600">Cargando...</p>
         </div>
       );
   }
 
-  // Separamos los tabs
-  const regularTabs = (tabs || []).filter(t => t.tipo !== 'service');
-  const serviceTabs = (tabs || []).filter(t => t.tipo === 'service');
+  const regularTabs = currentPeriodTabs.filter(t => t.tipo !== 'service');
+  const serviceTabs = currentPeriodTabs.filter(t => t.tipo === 'service');
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -290,7 +307,7 @@ function App() {
       {isModalOpen && <ConfigPanel 
             opciones={opcionesConfig} 
             seleccion={tempConfig} 
-            carreras={carreras} // El panel filtra internamente basado en 'tipo'
+            carreras={carreras} 
             onChange={(field, val) => setTempConfig(prev => ({ ...prev, [field]: val }))} 
             onConfirm={() => {
                 const nombre = tempConfig.nombreGrupo.trim().toUpperCase();
@@ -298,10 +315,10 @@ function App() {
                 const tabData = { nombre, tipo: tempConfig.tipo, config: { ...tempConfig } };
                 
                 if (isEditingTab && activeTabId) {
-                    setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, ...tabData } : t));
+                    setTabs(prev => prev.map(t => t.id.toString() === activeTabId.toString() ? { ...t, ...tabData } : t));
                 } else {
                     const newId = Date.now();
-                    setTabs(prev => [...(prev || []), { id: newId, ...tabData, horario: {}, customMaterias: [] }]);
+                    setTabs(prev => [...(prev || []), { id: newId, ...tabData, horario: {}, customMaterias: [], periodo: activePeriod }]);
                     setActiveTabId(newId);
                 }
                 setModalOpen(false);
@@ -309,229 +326,242 @@ function App() {
             onCancel={() => setModalOpen(false)} 
         />}
 
-      <DocentesManager isOpen={showDocentesMgr} onClose={()=>setShowDocentesMgr(false)} docentes={docentes} setDocentes={setDocentes} materias={planEstudios} statsDocentes={statsDocentes} tabs={tabs} />
-      
+      <DocentesManager isOpen={showDocentesMgr} onClose={()=>setShowDocentesMgr(false)} docentes={docentes} setDocentes={setDocentes} materias={planEstudios} statsDocentes={statsDocentes} tabs={currentPeriodTabs} />
       <MateriasManager isOpen={showMateriasMgr} onClose={()=>setShowMateriasMgr(false)} materias={planEstudios} setPlanEstudios={setPlanEstudios} carreras={carreras} />
-      
       <CarrerasManager isOpen={showCarrerasMgr} onClose={()=>setShowCarrerasMgr(false)} carreras={carreras} setCarreras={setCarreras} materias={planEstudios} />
+      {showMonitor && <TeacherMonitor docentes={docentes} tabs={currentPeriodTabs} statsDocentes={statsDocentes} onClose={() => setShowMonitor(false)} />}
 
-      {showMonitor && <TeacherMonitor docentes={docentes} tabs={tabs} statsDocentes={statsDocentes} onClose={() => setShowMonitor(false)} />}
-
-      {(!tabs || tabs.length === 0 || !activeTab) ? (
-          <div className="flex flex-col h-screen bg-gray-50 items-center justify-center relative">
-              <div className="absolute top-5 right-5 flex gap-2 items-center">
-                  <button onClick={() => setShowCarrerasMgr(true)} className="flex items-center gap-2 text-slate-700 font-bold bg-white px-4 py-2 rounded shadow-sm border border-slate-200"><GraduationCap size={18}/> Carreras</button>
-                  <button onClick={() => setShowMonitor(true)} className="flex items-center gap-2 text-slate-700 font-bold bg-white px-4 py-2 rounded shadow-sm border border-slate-200"><Monitor size={18}/> Monitor</button>
-                  <button onClick={handleResetData} className="text-red-400 hover:text-red-600 text-xs px-3 py-1 font-bold"><Trash2 size={12}/> Reset</button>
+      <div className="bg-white border-b border-gray-300 shadow-sm flex items-center justify-between px-4 py-2 relative z-50">
+          <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-blue-50 text-blue-900 px-3 py-1.5 rounded-lg border border-blue-200">
+                  <Calendar size={16} />
+                  <select 
+                      value={activePeriod} 
+                      onChange={(e) => { setActivePeriod(e.target.value); setActiveTabId(null); }}
+                      className="bg-transparent border-none text-sm font-bold outline-none cursor-pointer"
+                  >
+                      <option value="1er Semestre">1er Semestre</option>
+                      <option value="2do Semestre">2do Semestre</option>
+                      <option value="Verano">Verano</option>
+                  </select>
               </div>
-              <div className="text-center p-12 bg-white rounded-2xl shadow-xl border border-gray-100 max-w-lg w-full mx-4">
-                  <div className="bg-[#F2BD1D] w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-white"><Calendar size={40} /></div>
-                  <h1 className="text-4xl font-bold text-gray-800 mb-3">Organizador FII</h1>
-                  <p className="text-gray-500 mb-8">No hay horarios creados. Empieza creando uno nuevo.</p>
-                  
-                  <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setIsEditingTab(false); setModalOpen(true); }} className="w-full bg-[#F2BD1D] hover:bg-yellow-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 shadow-lg transition-colors"><Plus size={24} /> Crear Nuevo Horario</button>
-                  
-                  {(docentes.length === 0 && planEstudios.length === 0) && (
-                      <button onClick={handleUploadInitialData} className="mt-8 flex items-center gap-2 mx-auto text-gray-400 hover:text-[#F2BD1D] text-sm underline">
-                          <Upload size={16}/> Inicializar Nube (CSV)
-                      </button>
+
+              <div className="h-6 w-px bg-gray-300 mx-2"></div>
+
+              <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-gray-500">Grupo:</span>
+                  <select 
+                      value={activeTabId || ''} 
+                      onChange={e => setActiveTabId(e.target.value)}
+                      className="p-1.5 border border-gray-300 rounded-lg font-bold text-gray-800 bg-gray-50 hover:bg-white focus:ring-2 focus:ring-[#F2BD1D] outline-none min-w-[200px] cursor-pointer"
+                  >
+                      {currentPeriodTabs.length === 0 && <option value="">-- Sin grupos --</option>}
+                      {regularTabs.length > 0 && (
+                          <optgroup label="Facultad Industrial">
+                              {regularTabs.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                          </optgroup>
+                      )}
+                      {serviceTabs.length > 0 && (
+                          <optgroup label="Servicio / Externos">
+                              {serviceTabs.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                          </optgroup>
+                      )}
+                  </select>
+              </div>
+
+              <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setIsEditingTab(false); setModalOpen(true); }} className="px-3 py-1.5 bg-[#F2BD1D] hover:bg-yellow-500 text-white rounded shadow-sm font-bold flex items-center gap-1 transition-colors">
+                  <Plus size={16}/> Nuevo Grupo
+              </button>
+
+              {activeTab && (
+                  <button onClick={() => { if(window.confirm("¿Eliminar este grupo?")) { setTabs(prev => prev.filter(t => t.id.toString() !== activeTabId.toString())); setActiveTabId(null); } }} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Eliminar Grupo">
+                      <Trash2 size={16}/>
+                  </button>
+              )}
+          </div>
+          
+          <div className="flex items-center gap-4">
+              {activeTab && (
+                  <div className="flex items-center gap-2 mr-4">
+                      <button onClick={() => downloadGroupSchedule(activeTab, 'excel')} className="px-3 py-1.5 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-200 hover:bg-green-100 flex items-center gap-2"><FileSpreadsheet size={14}/> EXCEL</button>
+                      <button onClick={() => downloadGroupSchedule(activeTab, 'pdf')} className="px-3 py-1.5 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-200 hover:bg-red-100 flex items-center gap-2"><FileText size={14}/> PDF</button>
+                  </div>
+              )}
+              <button onClick={() => setShowCarrerasMgr(true)} className="flex items-center gap-1 text-gray-600 font-bold hover:text-blue-600 transition-colors text-sm"><GraduationCap size={16}/> Carreras</button>
+              <button onClick={() => setShowMateriasMgr(true)} className="flex items-center gap-1 text-gray-600 font-bold hover:text-blue-600 transition-colors text-sm"><BookOpen size={16}/> Materias</button>
+              <button onClick={() => setShowDocentesMgr(true)} className="flex items-center gap-1 text-gray-600 font-bold hover:text-blue-600 transition-colors text-sm"><User size={16}/> Docentes</button>
+              <button onClick={() => setShowMonitor(true)} className="flex items-center gap-1 text-white bg-blue-800 px-3 py-1.5 rounded shadow-sm font-bold hover:bg-blue-900 transition-colors text-sm ml-2"><Monitor size={16}/> Monitor</button>
+          </div>
+      </div>
+
+      <div className="flex h-[calc(100vh-53px)] bg-gray-100 overflow-hidden font-sans">
+          
+          <div className="w-80 bg-white shadow-xl flex flex-col z-20 border-r">
+              <div className={`p-4 flex flex-col gap-3 shadow-md ${activeTab?.tipo === 'service' ? 'bg-purple-900' : 'bg-[#F2BD1D]'} text-white`}>
+                  {activeTab ? (
+                      <div className="bg-white/10 p-3 rounded-lg border border-white/20 cursor-pointer hover:bg-white/20 transition-all group" onClick={() => { setTempConfig({ ...activeTab.config, nombreGrupo: activeTab.nombre, tipo: activeTab.tipo || 'regular' }); setIsEditingTab(true); setModalOpen(true); }}>
+                          <div className="flex justify-between font-bold text-sm mb-1 text-white"><span>{activeTab.nombre}</span><Settings size={14} className="text-white/70"/></div>
+                          <span className={`font-mono text-xs block truncate font-bold text-white/90`}>{currentConfig.carrera || "MODO SERVICIO"}</span>
+                      </div>
+                  ) : (
+                      <div className="text-center p-4">
+                          <p className="font-bold">Ningún grupo seleccionado</p>
+                      </div>
+                  )}
+              </div>
+
+              <div className="p-2 border-b bg-gray-50 flex justify-center">
+                  <button 
+                      onClick={() => downloadFIIReport(currentPeriodTabs, planEstudios)} 
+                      className="w-full bg-blue-100 text-blue-800 text-xs font-bold py-1.5 rounded border border-blue-200 hover:bg-blue-200 flex items-center justify-center gap-2 transition-colors"
+                  >
+                      <FileSpreadsheet size={14}/> Reporte FII (Excel)
+                  </button>
+              </div>
+
+              <div className="p-2 border-b bg-gray-50 relative"><Search className="absolute left-3 top-4 text-gray-400" size={16}/><input type="text" placeholder="Buscar materia (Nombre o Código)..." className="w-full pl-9 py-2 text-sm border rounded focus:ring-1 focus:ring-[#F2BD1D] outline-none" value={filtroMateria} onChange={e=>setFiltroMateria(e.target.value)}/></div>
+              <div className="flex-1 overflow-y-auto p-2 bg-gray-50 space-y-2">
+                  {!activeTab ? (
+                      <p className="text-center text-xs text-gray-400 mt-10 p-4">Crea o selecciona un grupo en la barra superior.</p>
+                  ) : materiasDisponibles.length === 0 ? (
+                      <p className="text-center text-xs text-gray-400 mt-10 p-4">No se encontraron materias.</p>
+                  ) : (
+                      materiasDisponibles.map(mat => {
+                          const asignadas = Object.values(activeHorario).filter(h => h?.materia?.codigo === mat.codigo).length;
+                          return <DraggableMateria key={mat.codigo} materia={mat} horasAsignadas={asignadas}/>;
+                      })
                   )}
               </div>
           </div>
-      ) : (
-        <div className="flex h-screen bg-gray-100 overflow-hidden font-sans">
-            <div className="w-80 bg-white shadow-xl flex flex-col z-20 border-r">
-                <div className={`p-4 flex flex-col gap-3 shadow-md ${activeTab.tipo === 'service' ? 'bg-purple-900' : 'bg-[#F2BD1D]'} text-white`}>
-                    <div className="flex justify-between items-center">
-                        <h1 className="font-bold flex items-center gap-2"><LayoutGrid size={18}/> Panel</h1>
-                        <button onClick={() => setShowMonitor(true)} className="bg-white/20 p-1.5 rounded"><Monitor size={16}/></button>
-                    </div>
-                    <div className="flex gap-1 overflow-x-auto pb-1">
-                        <button onClick={() => setShowDocentesMgr(true)} className="flex-1 bg-white/20 py-1.5 rounded text-xs font-bold border border-white/10 hover:bg-white/30 transition-all min-w-[70px]">DOCENTES</button>
-                        <button onClick={() => setShowMateriasMgr(true)} className="flex-1 bg-white/20 py-1.5 rounded text-xs font-bold border border-white/10 hover:bg-white/30 transition-all min-w-[70px]">MATERIAS</button>
-                        <button onClick={() => setShowCarrerasMgr(true)} className="flex-1 bg-white/20 py-1.5 rounded text-xs font-bold border border-white/10 hover:bg-white/30 transition-all min-w-[70px]">CARRERAS</button>
-                    </div>
-                </div>
-                
-                <div className={`${activeTab.tipo === 'service' ? 'bg-purple-50' : 'bg-yellow-50'} p-3 border-b`}>
-                      <div className="bg-white p-3 rounded-lg border shadow-sm cursor-pointer hover:border-yellow-400 transition-all group" onClick={() => { setTempConfig({ ...activeTab.config, nombreGrupo: activeTab.nombre, tipo: activeTab.tipo || 'regular' }); setIsEditingTab(true); setModalOpen(true); }}>
-                        <div className="flex justify-between font-bold text-sm mb-1 text-blue-900"><span>{activeTab.nombre}</span><Settings size={14} className="text-gray-300"/></div>
-                        <span className={`font-mono text-xs block truncate font-bold ${activeTab.tipo === 'service' ? 'text-purple-600' : 'text-[#F2BD1D]'}`}>{currentConfig.carrera || "MODO SERVICIO"}</span>
-                    </div>
-                </div>
 
-                <div className="px-3 pb-2 pt-1 border-b bg-gray-50 flex justify-center">
-                    <button 
-                        onClick={() => downloadFIIReport(tabs, planEstudios)} 
-                        className="w-full bg-blue-100 text-blue-800 text-xs font-bold py-1.5 rounded border border-blue-200 hover:bg-blue-200 flex items-center justify-center gap-2 transition-colors"
-                    >
-                        <ClipboardList size={14}/> Reporte General FII
-                    </button>
-                </div>
+          <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+              {activeTab ? (
+                  <div className="flex-1 overflow-auto p-6 bg-gray-100">
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-300 min-w-[1000px]">
+                          <div className="grid grid-cols-7 border-b border-gray-300 sticky top-0 bg-white z-20 shadow-sm">
+                              <div className="p-3 font-bold text-center bg-gray-50 text-gray-400 border-r text-[10px] uppercase">Hora</div>
+                              {dias.map(d => <div key={d} className="p-3 font-bold text-center border-r border-gray-300 text-xs uppercase bg-blue-50 text-blue-900 last:border-r-0">{d}</div>)}
+                          </div>
+                          {bloquesHorarios.map((b) => (
+                              <div key={b.id} className="grid grid-cols-7 border-b border-gray-200 min-h-[110px]">
+                                  <div className="p-1 text-[9px] font-bold text-gray-500 bg-gray-50 border-r flex flex-col items-center justify-center text-center"><span>{b.inicio}</span><span className="text-gray-300">|</span><span>{b.fin}</span></div>
+                                  {dias.map(d => {
+                                      const id = `${d}-${b.id}`;
+                                      const asignacion = activeHorario[id];
+                                      const conflictos = getConflictos(id, asignacion);
+                                      const safeDocentes = Array.isArray(docentes) ? docentes : [];
+                                      const cod = asignacion ? cleanCode(asignacion.materia.codigo) : "";
+                                      const nom = asignacion ? cleanText(asignacion.materia.nombre) : "";
 
-                <div className="p-2 border-b bg-gray-50 relative"><Search className="absolute left-3 top-2.5 text-gray-400" size={16}/><input type="text" placeholder="Buscar materia (Nombre o Código)..." className="w-full pl-9 py-2 text-sm border rounded focus:ring-1 focus:ring-[#F2BD1D] outline-none" value={filtroMateria} onChange={e=>setFiltroMateria(e.target.value)}/></div>
-                <div className="flex-1 overflow-y-auto p-2 bg-gray-50 space-y-2">
-                    {materiasDisponibles.length === 0 ? (
-                        <p className="text-center text-xs text-gray-400 mt-10 p-4">
-                            {activeTab.tipo === 'service' 
-                                ? `No hay materias registradas para la carrera "${currentConfig.carrera}".`
-                                : "No se encontraron materias con estos filtros."}
-                        </p>
-                    ) : (
-                        materiasDisponibles.map(mat => {
-                            const asignadas = Object.values(activeHorario).filter(h => h?.materia?.codigo === mat.codigo).length;
-                            return <DraggableMateria key={mat.codigo} materia={mat} horasAsignadas={asignadas}/>;
-                        })
-                    )}
-                </div>
-            </div>
+                                      const recomendados = safeDocentes.filter(d => d.materias?.some(m => {
+                                          const mc = cleanCode(m.codigo);
+                                          const mn = cleanText(m.nombre);
+                                          return (mc && mc === cod) || (mn && nom && (mn.includes(nom) || nom.includes(mn)));
+                                      })).sort((a,b) => a.nombre.localeCompare(b.nombre));
+                                      
+                                      const otros = safeDocentes.filter(d => !recomendados.includes(d)).sort((a,b) => a.nombre.localeCompare(b.nombre));
+                                      const docsFiltrados = [...recomendados, {id:'sep',nombre:'──── OTROS ────',disabled:true}, ...otros];
 
-            <div className="flex-1 flex flex-col h-screen overflow-hidden">
-                <div className="border-b border-gray-300">
-                    
-                    {/* FILA 1: FACULTAD (Regular) */}
-                    <div className="bg-gray-100 px-2 pt-2 flex gap-1 overflow-x-auto items-center">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-2 select-none">Facultad</span>
-                        {regularTabs.map(tab => (
-                            <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={`px-4 py-2 rounded-t-lg text-sm font-bold flex items-center gap-3 cursor-pointer min-w-[140px] justify-between border-t border-x ${activeTabId?.toString() === tab.id?.toString() ? 'bg-white border-gray-300 z-10' : 'bg-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                                <span className="truncate">{tab.nombre}</span>
-                                <button onClick={(e) => { e.stopPropagation(); if(window.confirm("¿Cerrar?")) { const nt = tabs.filter(t=>t.id!==tab.id); setTabs(nt); setActiveTabId(nt[0]?.id || null); } }}><X size={12}/></button>
-                            </div>
-                        ))}
-                        <button onClick={() => { setTempConfig({ nombreGrupo: '', carrera: '', anio: '', semestre: '', tipo: 'regular' }); setIsEditingTab(false); setModalOpen(true); }} className="px-2 py-1 rounded hover:bg-[#F2BD1D] text-gray-500 hover:text-white transition-colors ml-1"><Plus size={16}/></button>
-                    </div>
+                                      let isDocenteOverloaded = false;
+                                      if (asignacion?.docente?.id) {
+                                          const docId = asignacion.docente.id;
+                                          const currentDoc = safeDocentes.find(d => d.id.toString() === docId.toString());
+                                          if (currentDoc) {
+                                              const totalHoras = statsDocentes[docId] || 0;
+                                              const tope = currentDoc.horasTope || 0;
+                                              if (tope > 0 && totalHoras > tope) isDocenteOverloaded = true;
+                                          }
+                                      }
 
-                    {/* FILA 2: EXTERNOS (Servicio) */}
-                    {serviceTabs.length > 0 && (
-                        <div className="bg-purple-50 px-2 py-1 flex gap-1 overflow-x-auto items-center border-t border-gray-200 shadow-inner">
-                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider mr-2 select-none">Externos</span>
-                            {serviceTabs.map(tab => (
-                                <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={`px-3 py-1 rounded text-xs font-bold flex items-center gap-2 cursor-pointer border ${activeTabId?.toString() === tab.id?.toString() ? 'bg-white border-purple-300 text-purple-900 shadow-sm' : 'bg-purple-100 text-purple-600 border-transparent hover:bg-purple-200'}`}>
-                                    <span className="truncate flex items-center gap-1"><Briefcase size={12}/> {tab.nombre}</span>
-                                    <button onClick={(e) => { e.stopPropagation(); if(window.confirm("¿Cerrar?")) { const nt = tabs.filter(t=>t.id!==tab.id); setTabs(nt); setActiveTabId(nt[0]?.id || null); } }} className="hover:text-red-500"><X size={10}/></button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                                      return (
+                                      <div key={id} className="border-r border-gray-200 last:border-r-0 p-0.5 bg-white hover:bg-gray-50">
+                                              <DroppableCell 
+                                                  id={id} asignacion={asignacion} 
+                                                  onRemove={(cid) => updateActiveHorario(p => {const n={...p}; delete n[cid]; return n;})} 
+                                                  onDocenteChange={(cid, docId) => { 
+                                                      const doc = safeDocentes.find(d => d.id.toString() === docId.toString()) || null;
+                                                      
+                                                      if (doc) {
+                                                          const currentMateriaCode = cleanCode(activeHorario[cid]?.materia?.codigo);
+                                                          
+                                                          const tieneOtraMateria = Object.values(activeHorario).some(asig =>
+                                                              asig.docente?.id.toString() === doc.id.toString() &&
+                                                              cleanCode(asig.materia?.codigo) !== currentMateriaCode
+                                                          );
 
-                <div className="bg-white p-4 border-b flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-blue-900">{activeTab.nombre}</h2>
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => downloadGroupSchedule(activeTab, 'excel')} className="px-3 py-1.5 bg-green-50 text-green-700 rounded text-xs font-bold border border-green-200 hover:bg-green-100 flex items-center gap-2"><FileSpreadsheet size={16}/> EXCEL</button>
-                        <button onClick={() => downloadGroupSchedule(activeTab, 'pdf')} className="px-3 py-1.5 bg-red-50 text-red-700 rounded text-xs font-bold border border-red-200 hover:bg-red-100 flex items-center gap-2"><FileText size={16}/> PDF</button>
-                    </div>
-                </div>
+                                                          if (tieneOtraMateria) {
+                                                              if (!window.confirm(`⚠️ ADVERTENCIA DE ASIGNACIÓN MÚLTIPLE\n\nEl docente ${doc.nombre} ya tiene asignada OTRA materia diferente en este mismo grupo (${activeTab.nombre}).\n\nNo es lo ideal, pero ¿deseas continuar y asignarle esta materia también?`)) {
+                                                                  return;
+                                                              }
+                                                          }
 
-                <div className="flex-1 overflow-auto p-6 bg-gray-100">
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-300 min-w-[1000px]">
-                        <div className="grid grid-cols-7 border-b border-gray-300 sticky top-0 bg-white z-20 shadow-sm">
-                            <div className="p-3 font-bold text-center bg-gray-50 text-gray-400 border-r text-[10px] uppercase">Hora</div>
-                            {dias.map(d => <div key={d} className="p-3 font-bold text-center border-r border-gray-300 text-xs uppercase bg-blue-50 text-blue-900 last:border-r-0">{d}</div>)}
-                        </div>
-                        {bloquesHorarios.map((b) => (
-                            <div key={b.id} className="grid grid-cols-7 border-b border-gray-200 min-h-[110px]">
-                                <div className="p-1 text-[9px] font-bold text-gray-500 bg-gray-50 border-r flex flex-col items-center justify-center text-center"><span>{b.inicio}</span><span className="text-gray-300">|</span><span>{b.fin}</span></div>
-                                {dias.map(d => {
-                                    const id = `${d}-${b.id}`;
-                                    const asignacion = activeHorario[id];
-                                    const conflictos = getConflictos(id, asignacion);
-                                    const safeDocentes = Array.isArray(docentes) ? docentes : [];
-                                    const cod = asignacion ? cleanCode(asignacion.materia.codigo) : "";
-                                    const nom = asignacion ? cleanText(asignacion.materia.nombre) : "";
+                                                          const celdasAfectadas = Object.entries(activeHorario)
+                                                              .filter(([_, asign]) => cleanCode(asign.materia?.codigo) === currentMateriaCode)
+                                                              .map(([key]) => key);
 
-                                    const recomendados = safeDocentes.filter(d => d.materias?.some(m => {
-                                        const mc = cleanCode(m.codigo);
-                                        const mn = cleanText(m.nombre);
-                                        return (mc && mc === cod) || (mn && nom && (mn.includes(nom) || nom.includes(mn)));
-                                    }));
-                                    
-                                    const otros = safeDocentes.filter(d => !recomendados.includes(d)).sort((a,b) => a.nombre.localeCompare(b.nombre));
-                                    
-                                    const docsFiltrados = [...recomendados, {id:'sep',nombre:'──── OTROS ────',disabled:true}, ...otros];
+                                                          let fusionDetectada = false;
 
-                                    let isDocenteOverloaded = false;
-                                    if (asignacion?.docente?.id) {
-                                        const docId = asignacion.docente.id;
-                                        const currentDoc = safeDocentes.find(d => d.id.toString() === docId.toString());
-                                        if (currentDoc) {
-                                            const totalHoras = statsDocentes[docId] || 0;
-                                            const tope = currentDoc.horasTope || 0;
-                                            if (tope > 0 && totalHoras > tope) isDocenteOverloaded = true;
-                                        }
-                                    }
+                                                          for (const cellKey of celdasAfectadas) {
+                                                              const ocupados = ocupacionGlobal.docentes[cellKey] || [];
+                                                              const conflicto = ocupados.find(e => {
+                                                                  const parts = e.split(':');
+                                                                  return parts[1] === doc.id.toString() && parts[0] !== activeTabId?.toString();
+                                                              });
 
-                                    return (
-                                    <div key={id} className="border-r border-gray-200 last:border-r-0 p-0.5 bg-white hover:bg-gray-50">
-                                            <DroppableCell 
-                                                id={id} asignacion={asignacion} 
-                                                onRemove={(cid) => updateActiveHorario(p => {const n={...p}; delete n[cid]; return n;})} 
-                                                onDocenteChange={(cid, docId) => { 
-                                                    const doc = safeDocentes.find(d => d.id.toString() === docId.toString()) || null;
-                                                    
-                                                    if (doc) {
-                                                        const currentMateriaCode = cleanCode(activeHorario[cid]?.materia?.codigo);
-                                                        const celdasAfectadas = Object.entries(activeHorario)
-                                                            .filter(([_, asign]) => cleanCode(asign.materia?.codigo) === currentMateriaCode)
-                                                            .map(([key]) => key);
+                                                              if (conflicto) {
+                                                                  const parts = conflicto.split(':');
+                                                                  const tabIdConflictivo = parts[0];
+                                                                  const materiaConflictiva = parts[2];
+                                                                  const grupoConflictivo = currentPeriodTabs.find(t => t.id.toString() === tabIdConflictivo.toString())?.nombre || "Otro grupo";
+                                                                  const [dia, bloqueId] = cellKey.split('-');
+                                                                  const bloqueInfo = bloquesHorarios.find(b => b.id === bloqueId);
+                                                                  const horarioTexto = `${dia} ${bloqueInfo?.inicio}`;
 
-                                                        let fusionDetectada = false;
+                                                                  if (materiaConflictiva !== currentMateriaCode) {
+                                                                      alert(`⛔ CHOQUE IMPOSIBLE\n\nNo se puede asignar a ${doc.nombre}.\n\nEl ${horarioTexto} ya está en el grupo "${grupoConflictivo}" impartiendo OTRA materia (${materiaConflictiva}).`);
+                                                                      return;
+                                                                  }
+                                                                  fusionDetectada = { grupo: grupoConflictivo, dia: horarioTexto };
+                                                              }
+                                                          }
 
-                                                        for (const cellKey of celdasAfectadas) {
-                                                            const ocupados = ocupacionGlobal.docentes[cellKey] || [];
-                                                            const conflicto = ocupados.find(e => {
-                                                                const parts = e.split(':');
-                                                                return parts[1] === doc.id.toString() && parts[0] !== activeTabId?.toString();
-                                                            });
-
-                                                            if (conflicto) {
-                                                                const parts = conflicto.split(':');
-                                                                const tabIdConflictivo = parts[0];
-                                                                const materiaConflictiva = parts[2];
-                                                                const grupoConflictivo = tabs.find(t => t.id.toString() === tabIdConflictivo.toString())?.nombre || "Otro grupo";
-                                                                const [dia, bloqueId] = cellKey.split('-');
-                                                                const bloqueInfo = bloquesHorarios.find(b => b.id === bloqueId);
-                                                                const horarioTexto = `${dia} ${bloqueInfo?.inicio}`;
-
-                                                                if (materiaConflictiva !== currentMateriaCode) {
-                                                                    alert(`⛔ CHOQUE IMPOSIBLE\n\nNo se puede asignar a ${doc.nombre}.\n\nEl ${horarioTexto} ya está en el grupo "${grupoConflictivo}" impartiendo OTRA materia (${materiaConflictiva}).`);
-                                                                    return;
-                                                                }
-                                                                fusionDetectada = { grupo: grupoConflictivo, dia: horarioTexto };
-                                                            }
-                                                        }
-
-                                                        if (fusionDetectada) {
-                                                            if (!window.confirm(`⚠️ FUSIÓN DETECTADA\n\nEl docente ${doc.nombre} ya imparte esta materia en el grupo "${fusionDetectada.grupo}" (${fusionDetectada.dia}).\n\n¿Deseas fusionar ambos grupos?`)) {
-                                                                return;
-                                                            }
-                                                        }
-                                                    }
-                                                    
-                                                    const cell = activeHorario[cid];
-                                                    updateActiveHorario(prev => {
-                                                        const newH = {...prev};
-                                                        Object.keys(newH).forEach(k => { if (cleanCode(newH[k]?.materia?.codigo) === cleanCode(cell?.materia?.codigo)) newH[k] = { ...newH[k], docente: doc }; });
-                                                        return newH;
-                                                    });
-                                                }}
-                                                onTipoChange={(cid, t) => handleTipoChange(cid, t)}
-                                                onSalonChange={(cid, v) => updateActiveHorario(p => ({...p, [cid]: {...p[cid], salon: v}}))}
-                                                posiblesDocentes={docsFiltrados}
-                                                statusValidacion={conflictos?.validacion}
-                                                conflictos={conflictos}
-                                                isOverloaded={isDocenteOverloaded}
-                                            />
-                                    </div>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
+                                                          if (fusionDetectada) {
+                                                              if (!window.confirm(`⚠️ FUSIÓN DETECTADA\n\nEl docente ${doc.nombre} ya imparte esta materia en el grupo "${fusionDetectada.grupo}" (${fusionDetectada.dia}).\n\n¿Deseas fusionar ambos grupos en la misma clase?`)) {
+                                                                  return;
+                                                              }
+                                                          }
+                                                      }
+                                                      
+                                                      const cell = activeHorario[cid];
+                                                      updateActiveHorario(prev => {
+                                                          const newH = {...prev};
+                                                          Object.keys(newH).forEach(k => { if (cleanCode(newH[k]?.materia?.codigo) === cleanCode(cell?.materia?.codigo)) newH[k] = { ...newH[k], docente: doc }; });
+                                                          return newH;
+                                                      });
+                                                  }}
+                                                  onTipoChange={(cid, t) => handleTipoChange(cid, t)}
+                                                  onSalonChange={(cid, v) => updateActiveHorario(p => ({...p, [cid]: {...p[cid], salon: v}}))}
+                                                  posiblesDocentes={docsFiltrados}
+                                                  statusValidacion={conflictos?.validacion}
+                                                  conflictos={conflictos}
+                                                  isOverloaded={isDocenteOverloaded}
+                                              />
+                                      </div>
+                                      );
+                                  })}
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 text-gray-400">
+                      <Calendar size={64} className="opacity-20 mb-4"/>
+                      <p className="text-xl font-bold">Bienvenido al {activePeriod}</p>
+                      <p className="text-sm mt-2">Selecciona o crea un grupo en el menú superior para empezar.</p>
+                  </div>
+              )}
+          </div>
+      </div>
       
       <DragOverlay dropAnimation={null}>
         {dragItem ? (
